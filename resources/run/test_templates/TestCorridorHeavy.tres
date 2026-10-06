@@ -1,0 +1,117 @@
+[gd_resource type="Resource" load_steps=25 format=3]
+
+[ext_resource type="Script" path="res://resources/run/DungeonTemplateResource.gd" id="1_template"]
+[ext_resource type="Script" path="res://resources/run/DungeonGrammarRuleResource.gd" id="2_rule"]
+[ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="3_module"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/room_encounter_a.tres" id="4_encounter_a"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/room_encounter_b.tres" id="5_encounter_b"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/room_loot.tres" id="6_loot"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/room_event.tres" id="7_event"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/room_interaction.tres" id="8_interaction"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/corridor_encounter.tres" id="9_corridor"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/side_loot.tres" id="10_side_loot"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/side_event.tres" id="11_side_event"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/side_special.tres" id="12_side_special"]
+
+[sub_resource type="Resource" id="Start"]
+script = ExtResource("3_module")
+stable_id = &"test_start"
+roles = [&"START"]
+
+[sub_resource type="Resource" id="Exit"]
+script = ExtResource("3_module")
+stable_id = &"test_exit"
+roles = [&"EXIT"]
+
+[sub_resource type="Resource" id="Corridor"]
+script = ExtResource("3_module")
+stable_id = &"test_corridor"
+roles = [&"CORRIDOR"]
+footprint_size = Vector2(12, 4)
+content_slots = [ExtResource("9_corridor")]
+
+[sub_resource type="Resource" id="Room"]
+script = ExtResource("3_module")
+stable_id = &"test_room"
+roles = [&"ROOM"]
+footprint_size = Vector2(10, 10)
+content_slots = [ExtResource("4_encounter_a"), ExtResource("5_encounter_b"), ExtResource("6_loot"), ExtResource("7_event"), ExtResource("8_interaction")]
+
+[sub_resource type="Resource" id="TurnLeft"]
+script = ExtResource("3_module")
+stable_id = &"test_turn_left"
+roles = [&"TURN_LEFT"]
+
+[sub_resource type="Resource" id="TurnRight"]
+script = ExtResource("3_module")
+stable_id = &"test_turn_right"
+roles = [&"TURN_RIGHT"]
+
+[sub_resource type="Resource" id="Junction"]
+script = ExtResource("3_module")
+stable_id = &"test_junction"
+roles = [&"JUNCTION"]
+supports_branch = true
+
+[sub_resource type="Resource" id="Side"]
+script = ExtResource("3_module")
+stable_id = &"test_side_room"
+roles = [&"SIDE_ROOM"]
+supports_main_path = false
+content_slots = [ExtResource("10_side_loot"), ExtResource("11_side_event"), ExtResource("12_side_special")]
+
+[sub_resource type="Resource" id="RuleCorridor"]
+script = ExtResource("2_rule")
+role = &"CORRIDOR"
+min_count = 2
+max_count = 5
+selection_weight = 12.0
+max_consecutive = 3
+module_definition = SubResource("Corridor")
+
+[sub_resource type="Resource" id="RuleRoom"]
+script = ExtResource("2_rule")
+role = &"ROOM"
+max_count = 2
+selection_weight = 1.0
+max_consecutive = 1
+module_definition = SubResource("Room")
+
+[sub_resource type="Resource" id="RuleLeft"]
+script = ExtResource("2_rule")
+role = &"TURN_LEFT"
+max_count = 1
+selection_weight = 1.0
+module_definition = SubResource("TurnLeft")
+
+[sub_resource type="Resource" id="RuleRight"]
+script = ExtResource("2_rule")
+role = &"TURN_RIGHT"
+max_count = 1
+selection_weight = 1.0
+module_definition = SubResource("TurnRight")
+
+[sub_resource type="Resource" id="RuleJunction"]
+script = ExtResource("2_rule")
+role = &"JUNCTION"
+max_count = 1
+selection_weight = 0.5
+module_definition = SubResource("Junction")
+
+[sub_resource type="Resource" id="RuleSide"]
+script = ExtResource("2_rule")
+role = &"SIDE_ROOM"
+max_count = 1
+main_path_only = false
+module_definition = SubResource("Side")
+
+[resource]
+script = ExtResource("1_template")
+stable_id = &"TEST_CORRIDOR_HEAVY"
+theme_id = &"TEST"
+min_modules = 6
+max_modules = 9
+min_main_path_depth = 3
+grammar_rules = [SubResource("RuleCorridor"), SubResource("RuleRoom"), SubResource("RuleLeft"), SubResource("RuleRight"), SubResource("RuleJunction"), SubResource("RuleSide")]
+module_pool = [SubResource("Start"), SubResource("Exit"), SubResource("Corridor"), SubResource("Room"), SubResource("TurnLeft"), SubResource("TurnRight"), SubResource("Junction"), SubResource("Side")]
+content_profile_id = &"TEST_NONE"

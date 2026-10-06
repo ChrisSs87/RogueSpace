@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://autoloads/CombatEncounterManager.gd" id="1"]
+
+[node name="CombatEncounterManager" type="Node"]
+script = ExtResource("1")
+join_window_sec = 1.5
+max_enemies_per_combat = 2
+min_separation_deg = 30.0
+global_encounter_timeout_sec = 10.0
+bystander_standoff_distance_m = 5.0
+combat_transition_enabled = true

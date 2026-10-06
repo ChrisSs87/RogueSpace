@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=4 format=3]
+[ext_resource type="Script" path="res://resources/run/ContentPlacementProfileResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/ContentCategoryWeightResource.gd" id="2"]
+[sub_resource type="Resource" id="Encounter"]
+script = ExtResource("2")
+category = &"ENCOUNTER"
+weight = 12.0
+[resource]
+script = ExtResource("1")
+stable_id = &"TEST_COMBAT_HEAVY"
+display_name = "Combat Heavy"
+min_slots = 2
+max_slots = 4
+category_weights = [SubResource("Encounter")]
+forbidden_node_roles = [&"START", &"EXIT"]
+max_slots_per_node = 1

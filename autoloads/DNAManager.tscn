@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://autoloads/DNAManager.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/dna/orco_dna.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/dna/xenomorfo_dna.tres" id="3"]
+
+[node name="DNAManager" type="Node"]
+script = ExtResource("1")
+dna_per_level = 1
+species_resources = [ExtResource("2"), ExtResource("3")]

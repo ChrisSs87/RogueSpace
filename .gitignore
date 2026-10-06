@@ -1,0 +1,23 @@
+# Godot generated data
+.godot/
+
+# Codex temporary files
+.codex-remote-attachments/
+
+# Test/validation artifacts
+artifacts/
+
+# Export/generated content
+export_templates/
+
+# Local editor configuration
+text_editor_themes/
+
+# Generated packages/builds
+*.zip
+*.apk
+*.exe
+
+# Operating system files
+.DS_Store
+Thumbs.db

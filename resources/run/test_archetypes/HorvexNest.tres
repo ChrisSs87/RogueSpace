@@ -1,0 +1,169 @@
+[gd_resource type="Resource" load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://resources/run/DungeonArchetypeResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/DungeonSectorDefinitionResource.gd" id="2"]
+[ext_resource type="Script" path="res://resources/run/DungeonSectorPathResource.gd" id="3"]
+[ext_resource type="Script" path="res://resources/run/DungeonSizeProfileResource.gd" id="4"]
+[ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="5"]
+[ext_resource type="Resource" path="res://resources/run/test_templates/TestHorvexNest.tres" id="6"]
+[ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="7"]
+
+[sub_resource type="Resource" id="Level1Size"]
+script = ExtResource("4")
+size_id = &"LEVEL_1"
+min_modules = 15
+max_modules = 15
+role_min_counts = {"CORRIDOR": 3, "ROOM": 1, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 6, "ROOM": 2, "JUNCTION": 2}
+[sub_resource type="Resource" id="Level2Size"]
+script = ExtResource("4")
+size_id = &"LEVEL_2"
+min_modules = 23
+max_modules = 23
+role_min_counts = {"CORRIDOR": 5, "ROOM": 1, "TURN_LEFT": 1, "TURN_RIGHT": 1, "JUNCTION": 4}
+role_max_counts = {"CORRIDOR": 10, "ROOM": 2, "TURN_LEFT": 3, "TURN_RIGHT": 3, "JUNCTION": 4}
+[sub_resource type="Resource" id="Level3Size"]
+script = ExtResource("4")
+size_id = &"LEVEL_3"
+min_modules = 29
+max_modules = 29
+role_min_counts = {"CORRIDOR": 6, "ROOM": 1, "TURN_LEFT": 2, "TURN_RIGHT": 2, "JUNCTION": 5}
+role_max_counts = {"CORRIDOR": 11, "ROOM": 2, "TURN_LEFT": 3, "TURN_RIGHT": 3, "JUNCTION": 5}
+
+[sub_resource type="Resource" id="CentralChamberPhysical"]
+script = ExtResource("7")
+stable_id = &"nest_central_chamber"
+roles = [&"JUNCTION"]
+tags = [&"CENTRAL_CHAMBER", &"CHAMBER", &"ORGANIC", &"TRANSIT"]
+footprint_size = Vector2(12, 12)
+placement_priority = 100
+connector_sides = [&"west", &"east", &"north", &"south"]
+supports_branch = true
+
+[sub_resource type="Resource" id="NestCorePhysical"]
+script = ExtResource("7")
+stable_id = &"nest_core_chamber"
+roles = [&"ROOM", &"DEAD_END"]
+tags = [&"NEST_CORE", &"CHAMBER", &"ORGANIC", &"DESTINATION", &"BOSS_FUTURE"]
+footprint_size = Vector2(14, 12)
+placement_priority = 100
+connector_sides = [&"west", &"east"]
+
+[sub_resource type="Resource" id="SmallChamber"]
+script = ExtResource("5")
+semantic_id = &"SMALL_CHAMBER"
+allowed_archetypes = [&"HORVEX_NEST"]
+compatible_node_roles = [&"ROOM"]
+min_count = 0
+max_count = 2
+space_kind = 1
+tags = [&"CHAMBER", &"ORGANIC"]
+[sub_resource type="Resource" id="BroodChamber"]
+script = ExtResource("5")
+semantic_id = &"BROOD_CHAMBER"
+allowed_archetypes = [&"HORVEX_NEST"]
+compatible_node_roles = [&"ROOM", &"DEAD_END"]
+max_count = 1
+space_kind = 1
+tags = [&"EGGS_FUTURE", &"CHAMBER"]
+[sub_resource type="Resource" id="RemainsChamber"]
+script = ExtResource("5")
+semantic_id = &"REMAINS_CHAMBER"
+allowed_archetypes = [&"HORVEX_NEST"]
+compatible_node_roles = [&"DEAD_END", &"ROOM"]
+max_count = 1
+branch_preference = 1
+space_kind = 1
+tags = [&"REMAINS", &"LOOT_FUTURE"]
+[sub_resource type="Resource" id="CentralChamber"]
+script = ExtResource("5")
+semantic_id = &"CENTRAL_CHAMBER"
+allowed_archetypes = [&"HORVEX_NEST"]
+compatible_node_roles = [&"JUNCTION"]
+max_count = 1
+main_path_preference = 1
+space_kind = 0
+tags = [&"CHAMBER", &"TRANSIT"]
+physical_module_variants = [SubResource("CentralChamberPhysical")]
+physical_variant_required = true
+preferred_connection_count = 3
+[sub_resource type="Resource" id="Core"]
+script = ExtResource("5")
+semantic_id = &"NEST_CORE"
+allowed_archetypes = [&"HORVEX_NEST"]
+allowed_sectors = [&"DEEP_NEST", &"CORE_NEST"]
+preferred_sectors = [&"CORE_NEST"]
+compatible_node_roles = [&"ROOM", &"DEAD_END"]
+mandatory = true
+min_count = 1
+min_depth_from_start = 5
+prefer_far_from_start = true
+space_kind = 1
+tags = [&"DUNGEON_OBJECTIVE", &"BOSS_FUTURE"]
+physical_module_variants = [SubResource("NestCorePhysical")]
+physical_variant_required = true
+
+[sub_resource type="Resource" id="Upper"]
+script = ExtResource("2")
+sector_id = &"UPPER_NEST"
+display_name = "Nest Level 1"
+template_pool = [ExtResource("6")]
+size_profiles = [SubResource("Level1Size")]
+light_profile_id = &"LOW"
+population_profile_id = &"HIGH"
+population_density = 0.7
+allowed_enemy_faction_tags = [&"HORVEX"]
+preferred_room_roles = [&"TUNNEL", &"JUNCTION", &"SMALL_CHAMBER"]
+transition_to_next_type = &"TUNNEL_DOWN"
+semantic_locations = [SubResource("SmallChamber"), SubResource("BroodChamber"), SubResource("RemainsChamber"), SubResource("CentralChamber")]
+[sub_resource type="Resource" id="Deep"]
+script = ExtResource("2")
+sector_id = &"DEEP_NEST"
+display_name = "Nest Level 2"
+template_pool = [ExtResource("6")]
+size_profiles = [SubResource("Level2Size")]
+light_profile_id = &"LOW"
+population_profile_id = &"HIGH"
+population_density = 0.82
+allowed_enemy_faction_tags = [&"HORVEX"]
+preferred_room_roles = [&"TUNNEL", &"JUNCTION", &"BROOD_CHAMBER"]
+transition_to_next_type = &"TUNNEL_DOWN"
+semantic_locations = [SubResource("SmallChamber"), SubResource("BroodChamber"), SubResource("RemainsChamber"), SubResource("CentralChamber")]
+[sub_resource type="Resource" id="CoreSector"]
+script = ExtResource("2")
+sector_id = &"CORE_NEST"
+display_name = "Nest Level 3"
+template_pool = [ExtResource("6")]
+size_profiles = [SubResource("Level3Size")]
+light_profile_id = &"LOW"
+population_profile_id = &"HIGH"
+population_density = 0.92
+allowed_enemy_faction_tags = [&"HORVEX"]
+preferred_room_roles = [&"TUNNEL", &"JUNCTION", &"BROOD_CHAMBER", &"NEST_CORE"]
+semantic_locations = [SubResource("SmallChamber"), SubResource("BroodChamber"), SubResource("RemainsChamber"), SubResource("CentralChamber")]
+
+[sub_resource type="Resource" id="PathTwo"]
+script = ExtResource("3")
+path_id = &"NEST_TWO_LEVELS"
+selection_weight = 1.0
+sectors = [SubResource("Upper"), SubResource("Deep")]
+[sub_resource type="Resource" id="PathThree"]
+script = ExtResource("3")
+path_id = &"NEST_THREE_LEVELS"
+selection_weight = 1.0
+sectors = [SubResource("Upper"), SubResource("Deep"), SubResource("CoreSector")]
+
+[resource]
+script = ExtResource("1")
+archetype_id = &"HORVEX_NEST"
+display_name = "Horvex Nest"
+sector_count_min = 2
+sector_count_max = 3
+sectors = [SubResource("Upper"), SubResource("Deep"), SubResource("CoreSector")]
+sector_paths = [SubResource("PathTwo"), SubResource("PathThree")]
+semantic_locations = [SubResource("Core")]
+allowed_enemy_faction_tags = [&"HORVEX"]
+light_profile_id = &"LOW"
+population_profile_id = &"HIGH"
+population_density = 0.8
+preferred_room_roles = [&"TUNNEL", &"JUNCTION", &"SMALL_CHAMBER", &"BROOD_CHAMBER", &"NEST_CORE"]

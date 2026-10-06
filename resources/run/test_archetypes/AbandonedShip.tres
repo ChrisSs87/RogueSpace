@@ -1,0 +1,75 @@
+[gd_resource type="Resource" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://resources/run/DungeonArchetypeResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/DungeonSectorDefinitionResource.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/run/test_templates/TestAbandonedShipSemantic.tres" id="3"]
+[ext_resource type="Script" path="res://resources/run/DungeonSizeProfileResource.gd" id="4"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipAirlock.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipBridge.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipCargo.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipCrewQuarters.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipEngine.tres" id="9"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipMedbay.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/run/test_semantic_locations/ShipLaboratory.tres" id="11"]
+
+[sub_resource type="Resource" id="Small"]
+script = ExtResource("4")
+size_id = &"SMALL"
+display_name = "Small"
+selection_weight = 1.0
+min_modules = 11
+max_modules = 11
+role_min_counts = {"CORRIDOR": 4, "ROOM": 1, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 6, "ROOM": 1, "JUNCTION": 2}
+min_reconnections = 0
+max_reconnections = 0
+
+[sub_resource type="Resource" id="Medium"]
+script = ExtResource("4")
+size_id = &"MEDIUM"
+display_name = "Medium"
+selection_weight = 2.0
+min_modules = 14
+max_modules = 14
+role_min_counts = {"CORRIDOR": 4, "ROOM": 2, "JUNCTION": 3}
+role_max_counts = {"CORRIDOR": 7, "ROOM": 3, "JUNCTION": 3}
+min_reconnections = 1
+max_reconnections = 1
+
+[sub_resource type="Resource" id="Large"]
+script = ExtResource("4")
+size_id = &"LARGE"
+display_name = "Large"
+selection_weight = 1.0
+min_modules = 17
+max_modules = 17
+role_min_counts = {"CORRIDOR": 4, "ROOM": 3, "JUNCTION": 4}
+role_max_counts = {"CORRIDOR": 8, "ROOM": 4, "JUNCTION": 4}
+min_reconnections = 1
+max_reconnections = 1
+
+[sub_resource type="Resource" id="Deck"]
+script = ExtResource("2")
+sector_id = &"DECK"
+display_name = "Deck"
+template_pool = [ExtResource("3")]
+size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
+light_profile_id = &"LOW_OFFLINE"
+population_profile_id = &"LOW_MEDIUM"
+population_density = 0.35
+allowed_enemy_faction_tags = [&"HORVEX", &"VARKHEM", &"MYKORA"]
+preferred_room_roles = [&"STORAGE", &"MEDBAY", &"CREW_ROOM", &"ENGINE_ROOM", &"BRIDGE"]
+semantic_locations = [ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11")]
+
+[resource]
+script = ExtResource("1")
+archetype_id = &"ABANDONED_SHIP"
+display_name = "Abandoned Ship"
+sector_count_min = 1
+sector_count_max = 1
+sectors = [SubResource("Deck")]
+allowed_enemy_faction_tags = [&"HORVEX", &"VARKHEM", &"MYKORA"]
+light_profile_id = &"LOW_OFFLINE"
+population_profile_id = &"LOW_MEDIUM"
+population_density = 0.35
+preferred_room_roles = [&"STORAGE", &"MEDBAY", &"CREW_ROOM", &"ENGINE_ROOM", &"BRIDGE"]

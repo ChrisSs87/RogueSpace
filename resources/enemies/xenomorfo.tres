@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyResource" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://resources/enemies/EnemyResource.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/cards/horvex_claw.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/cards/horvex_shell.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/cards/horvex_sting.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+enemy_name = "Horvex Avispa"
+species_id = "horvex"
+can_patrol = false
+can_lose_interest = false
+is_boss = false
+noise_response_mode = "investigate"
+lose_target_timeout_sec = 5.0
+patrol_speed_tier = 2
+chase_speed_tier = 4
+vision_range_tiles = 11.0
+vision_angle_deg = 140.0
+hearing_range_tiles = 7.0
+combat_distance_tiles = 2.5
+combat_approach_timeout_sec = 6.0
+perception_interval_sec = 0.2
+detection_time_sec = 1.0
+light_detection_curve = Array[float]([0.55, 0.7, 0.85, 1.0, 1.0, 1.0])
+proximity_override_tiles = 1.5
+max_health = 30
+opening_block = 0
+poison_immune = true
+combat_deck = [ExtResource("2"), ExtResource("2"), ExtResource("3"), ExtResource("4")]

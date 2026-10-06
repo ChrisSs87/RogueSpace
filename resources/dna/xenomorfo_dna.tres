@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DNASpeciesResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/dna/DNASpeciesResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = "xenomorfo"
+species_display_name = "Xenomorfo"
+units_per_level = 1
+weapon_damage_per_level = 0
+shield_block_per_level = 2
+suit_max_health_per_level = 2

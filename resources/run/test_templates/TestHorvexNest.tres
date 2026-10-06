@@ -1,0 +1,165 @@
+[gd_resource type="Resource" load_steps=17 format=3]
+
+[ext_resource type="Script" path="res://resources/run/DungeonTemplateResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/DungeonGrammarRuleResource.gd" id="2"]
+[ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="3"]
+
+[sub_resource type="Resource" id="Start"]
+script = ExtResource("3")
+stable_id = &"nest_start_tunnel"
+roles = [&"START"]
+connector_sides = [&"east"]
+
+[sub_resource type="Resource" id="Exit"]
+script = ExtResource("3")
+stable_id = &"nest_tunnel_down_exit"
+roles = [&"EXIT"]
+tags = [&"TUNNEL_DOWN", &"NEST_DESCENT"]
+footprint_size = Vector2(8, 4)
+connector_sides = [&"west"]
+
+[sub_resource type="Resource" id="TunnelShort"]
+script = ExtResource("3")
+stable_id = &"nest_tunnel_short"
+roles = [&"CORRIDOR"]
+tags = [&"TUNNEL", &"TUNNEL_SHORT"]
+footprint_size = Vector2(8, 4)
+connector_sides = [&"west", &"east"]
+placement_priority = 10
+
+[sub_resource type="Resource" id="TunnelMedium"]
+script = ExtResource("3")
+stable_id = &"nest_tunnel_medium"
+roles = [&"CORRIDOR"]
+tags = [&"TUNNEL", &"TUNNEL_MEDIUM"]
+footprint_size = Vector2(12, 4)
+connector_sides = [&"west", &"east"]
+
+[sub_resource type="Resource" id="SmallChamber"]
+script = ExtResource("3")
+stable_id = &"nest_small_chamber"
+roles = [&"ROOM"]
+tags = [&"SMALL_CHAMBER", &"CHAMBER"]
+footprint_size = Vector2(8, 8)
+connector_sides = [&"west", &"east"]
+placement_priority = 10
+
+[sub_resource type="Resource" id="BroodChamber"]
+script = ExtResource("3")
+stable_id = &"nest_brood_chamber"
+roles = [&"ROOM"]
+tags = [&"BROOD_CHAMBER", &"CHAMBER"]
+footprint_size = Vector2(10, 10)
+connector_sides = [&"west", &"east"]
+
+[sub_resource type="Resource" id="TurnLeft"]
+script = ExtResource("3")
+stable_id = &"nest_curve_left"
+roles = [&"TURN_LEFT"]
+tags = [&"TUNNEL", &"CURVE"]
+connector_sides = [&"west", &"north"]
+
+[sub_resource type="Resource" id="TurnRight"]
+script = ExtResource("3")
+stable_id = &"nest_curve_right"
+roles = [&"TURN_RIGHT"]
+tags = [&"TUNNEL", &"CURVE"]
+connector_sides = [&"west", &"south"]
+
+[sub_resource type="Resource" id="CrossJunction"]
+script = ExtResource("3")
+stable_id = &"nest_cross_junction"
+roles = [&"JUNCTION"]
+tags = [&"TUNNEL", &"JUNCTION", &"CENTRAL_CHAMBER"]
+footprint_size = Vector2(8, 8)
+connector_sides = [&"west", &"east", &"north", &"south"]
+supports_branch = true
+placement_priority = 10
+
+[sub_resource type="Resource" id="TJunction"]
+script = ExtResource("3")
+stable_id = &"nest_t_junction"
+roles = [&"JUNCTION"]
+tags = [&"TUNNEL", &"JUNCTION", &"CENTRAL_CHAMBER"]
+footprint_size = Vector2(8, 8)
+connector_sides = [&"west", &"east", &"south"]
+supports_branch = true
+
+[sub_resource type="Resource" id="DeadEnd"]
+script = ExtResource("3")
+stable_id = &"nest_dead_end"
+roles = [&"DEAD_END"]
+tags = [&"DEAD_END", &"TUNNEL_TERMINAL"]
+footprint_size = Vector2(6, 4)
+connector_sides = [&"west"]
+supports_main_path = false
+supports_branch = true
+
+[sub_resource type="Resource" id="CorridorRule"]
+script = ExtResource("2")
+role = &"CORRIDOR"
+min_count = 3
+max_count = 8
+selection_weight = 12.0
+max_consecutive = 2
+module_definition = SubResource("TunnelShort")
+module_variants = [SubResource("TunnelMedium")]
+
+[sub_resource type="Resource" id="RoomRule"]
+script = ExtResource("2")
+role = &"ROOM"
+min_count = 1
+max_count = 4
+selection_weight = 4.0
+max_consecutive = 2
+module_definition = SubResource("SmallChamber")
+module_variants = [SubResource("BroodChamber")]
+
+[sub_resource type="Resource" id="LeftRule"]
+script = ExtResource("2")
+role = &"TURN_LEFT"
+max_count = 3
+selection_weight = 7.0
+max_consecutive = 2
+module_definition = SubResource("TurnLeft")
+
+[sub_resource type="Resource" id="RightRule"]
+script = ExtResource("2")
+role = &"TURN_RIGHT"
+max_count = 3
+selection_weight = 7.0
+max_consecutive = 2
+module_definition = SubResource("TurnRight")
+
+[sub_resource type="Resource" id="JunctionRule"]
+script = ExtResource("2")
+role = &"JUNCTION"
+min_count = 2
+max_count = 4
+selection_weight = 9.0
+module_definition = SubResource("CrossJunction")
+module_variants = [SubResource("TJunction")]
+
+[resource]
+script = ExtResource("1")
+stable_id = &"TEST_HORVEX_NEST"
+theme_id = &"TEST_NEST"
+min_modules = 15
+max_modules = 23
+min_main_path_depth = 7
+max_turns = 6
+allow_branches = true
+branch_chance = 1.0
+branch_length = 2
+branch_transit_roles = [&"CORRIDOR"]
+branch_destination_role = &"DEAD_END"
+grammar_rules = [SubResource("CorridorRule"), SubResource("RoomRule"), SubResource("LeftRule"), SubResource("RightRule"), SubResource("JunctionRule")]
+module_pool = [SubResource("Start"), SubResource("Exit"), SubResource("TunnelShort"), SubResource("TunnelMedium"), SubResource("SmallChamber"), SubResource("BroodChamber"), SubResource("TurnLeft"), SubResource("TurnRight"), SubResource("CrossJunction"), SubResource("TJunction"), SubResource("DeadEnd")]
+lighting_profile_id = &"LOW"
+allowed_faction_tags = [&"HORVEX"]
+max_placement_candidates_per_node = 8
+max_placement_retries = 1
+max_spatial_backtrack_depth = 2
+max_physical_sector_attempts = 3
+enforce_walkable_containment = true
+max_plan_generation_retries = 1

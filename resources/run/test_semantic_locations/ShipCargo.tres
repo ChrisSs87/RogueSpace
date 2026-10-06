@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+semantic_id = &"CARGO_HOLD"
+display_name = "Cargo Hold"
+allowed_archetypes = [&"ABANDONED_SHIP"]
+compatible_node_roles = [&"SIDE_ROOM", &"ROOM"]
+mandatory = true
+min_count = 1
+max_count = 1
+branch_preference = 1
+min_depth_from_start = 2
+prefer_far_from_start = true
+tags = [&"DESTINATION", &"PRIMARY_OBJECTIVE"]
+future_gameplay_tags = [&"MAIN_REWARD_FUTURE"]

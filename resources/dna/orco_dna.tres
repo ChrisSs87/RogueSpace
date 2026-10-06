@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="DNASpeciesResource" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://resources/dna/DNASpeciesResource.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/cards/golpe_pesado.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/cards/escudo_pesado.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+species_id = "orco"
+species_display_name = "Orco"
+units_per_level = 1
+weapon_damage_per_level = 2
+weapon_level_3_card = ExtResource("2")
+shield_block_per_level = 2
+shield_level_3_card = ExtResource("3")
+suit_max_health_per_level = 5

@@ -1,0 +1,303 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="EnemyScene"]
+[ext_resource type="Resource" path="res://resources/enemies/orco_melee.tres" id="OrcoMeleeRes"]
+[ext_resource type="Resource" path="res://resources/enemies/orco_picaro.tres" id="OrcoPicaroRes"]
+[ext_resource type="Resource" path="res://resources/enemies/xenomorfo.tres" id="XenoRes"]
+[ext_resource type="Script" path="res://scripts/world/LightSource.gd" id="LightSourceScript"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.22, 0.2, 0.24, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
+albedo_color = Color(0.5, 0.48, 0.55, 1)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.07, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.6
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_sandbox"]
+vertices = PackedVector3Array(0.15, 1, 3.85, 6, 1, 3.85, 6, 1, -3.85, 0.15, 1, -3.85, 6, 1, 0.85, 12, 1, 0.85, 12, 1, -0.85, 6, 1, -0.85, 12, 1, 3.85, 18, 1, 3.85, 18, 1, -3.85, 12, 1, -3.85, 18, 1, 0.85, 24, 1, 0.85, 24, 1, -0.85, 18, 1, -0.85, 24, 1, 3.85, 30, 1, 3.85, 30, 1, -3.85, 24, 1, -3.85, 30, 1, 0.85, 36, 1, 0.85, 36, 1, -0.85, 30, 1, -0.85, 36, 1, 3.85, 41.85, 1, 3.85, 41.85, 1, -3.85, 36, 1, -3.85)
+polygons = [PackedInt32Array(0, 1, 2), PackedInt32Array(0, 2, 3), PackedInt32Array(4, 5, 6), PackedInt32Array(4, 6, 7), PackedInt32Array(8, 9, 10), PackedInt32Array(8, 10, 11), PackedInt32Array(12, 13, 14), PackedInt32Array(12, 14, 15), PackedInt32Array(16, 17, 18), PackedInt32Array(16, 18, 19), PackedInt32Array(20, 21, 22), PackedInt32Array(20, 22, 23), PackedInt32Array(24, 25, 26), PackedInt32Array(24, 26, 27)]
+
+[node name="DungeonSandbox" type="Node3D"]
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+use_edge_connections = true
+navigation_mesh = SubResource("NavigationMesh_sandbox")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8, -0.3, 0.5, 0, 0.86, 0.5, -0.6, -0.4, 0.7, 0, 8, 0)
+light_energy = 1.0
+
+[node name="Floor" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, -0.25, 0)
+use_collision = true
+size = Vector3(42, 0.5, 8)
+material = SubResource("StandardMaterial3D_floor")
+
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="Room1_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.5, 4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room1_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.5, -4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room1_West" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+use_collision = true
+size = Vector3(0.3, 3, 8)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room1_EastTop" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 1.5, 2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room1_EastBottom" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 1.5, -2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Corridor1_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, 1)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Corridor1_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, -1)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room2_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1.5, 4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room2_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1.5, -4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room2_WestTop" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1.5, 2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room2_WestBottom" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1.5, -2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room2_EastTop" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 1.5, 2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room2_EastBottom" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 1.5, -2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Corridor2_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 1.5, 1)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Corridor2_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 1.5, -1)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room3_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27, 1.5, 4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room3_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27, 1.5, -4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room3_WestTop" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 1.5, 2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room3_WestBottom" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 1.5, -2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room3_EastTop" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 1.5, 2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room3_EastBottom" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 1.5, -2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Corridor3_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33, 1.5, 1)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Corridor3_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33, 1.5, -1)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room4_North" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 1.5, 4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room4_South" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 1.5, -4)
+use_collision = true
+size = Vector3(6, 3, 0.3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room4_WestTop" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 1.5, 2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room4_WestBottom" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 1.5, -2.5)
+use_collision = true
+size = Vector3(0.3, 3, 3)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="Room4_East" type="CSGBox3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 1.5, 0)
+use_collision = true
+size = Vector3(0.3, 3, 8)
+material = SubResource("StandardMaterial3D_wall")
+
+[node name="PatrolPoints" type="Node3D" parent="."]
+
+[node name="OrcoMelee1_A" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, -3)
+
+[node name="OrcoMelee1_B" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 3)
+
+[node name="OrcoMelee2_A" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, -3.5)
+
+[node name="OrcoMelee2_B" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.5, 0, 3.5)
+
+[node name="OrcoPicaro1_A" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 3.5)
+
+[node name="OrcoPicaro1_B" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.5, 0, -3.5)
+
+[node name="OrcoMelee3_A" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.5, 0, -3.5)
+
+[node name="OrcoMelee3_B" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.5, 0, 3.5)
+
+[node name="OrcoPicaro2_A" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.5, 0, -3.5)
+
+[node name="OrcoPicaro2_B" type="Marker3D" parent="PatrolPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 41.5, 0, 3.5)
+
+[node name="OrcoMelee1" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, -3)
+enemy_resource = ExtResource("OrcoMeleeRes")
+patrol_points = [NodePath("../PatrolPoints/OrcoMelee1_A"), NodePath("../PatrolPoints/OrcoMelee1_B")]
+debug_color = Color(0.6, 0.4, 0.2, 1)
+
+[node name="OrcoMelee2" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 1, -3.5)
+enemy_resource = ExtResource("OrcoMeleeRes")
+patrol_points = [NodePath("../PatrolPoints/OrcoMelee2_A"), NodePath("../PatrolPoints/OrcoMelee2_B")]
+debug_color = Color(0.6, 0.4, 0.2, 1)
+
+[node name="OrcoPicaro1" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 1, 3.5)
+enemy_resource = ExtResource("OrcoPicaroRes")
+patrol_points = [NodePath("../PatrolPoints/OrcoPicaro1_A"), NodePath("../PatrolPoints/OrcoPicaro1_B")]
+debug_color = Color(0.3, 0.55, 0.3, 1)
+
+[node name="OrcoMelee3" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.5, 1, -3.5)
+enemy_resource = ExtResource("OrcoMeleeRes")
+patrol_points = [NodePath("../PatrolPoints/OrcoMelee3_A"), NodePath("../PatrolPoints/OrcoMelee3_B")]
+debug_color = Color(0.6, 0.4, 0.2, 1)
+
+[node name="Xenomorfo1" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 27, 1, -3)
+enemy_resource = ExtResource("XenoRes")
+debug_color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="OrcoPicaro2" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.5, 1, -3.5)
+enemy_resource = ExtResource("OrcoPicaroRes")
+patrol_points = [NodePath("../PatrolPoints/OrcoPicaro2_A"), NodePath("../PatrolPoints/OrcoPicaro2_B")]
+debug_color = Color(0.3, 0.55, 0.3, 1)
+
+[node name="Xenomorfo2" parent="." instance=ExtResource("EnemyScene")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 39, 1, 3)
+enemy_resource = ExtResource("XenoRes")
+debug_color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="TorchRoom2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 2, 0)
+script = ExtResource("LightSourceScript")
+intensity = 5
+radius = 5.0
+
+[node name="TorchCorridor2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 2, 0)
+script = ExtResource("LightSourceScript")
+intensity = 3
+radius = 3.0
+
+[node name="TorchRoom4" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 2, 0)
+script = ExtResource("LightSourceScript")
+intensity = 5
+radius = 6.0

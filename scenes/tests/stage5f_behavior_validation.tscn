@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/stage5f_behavior_validation.gd" id="1_validation"]
+[ext_resource type="PackedScene" path="res://scenes/dungeon/DungeonSandbox.tscn" id="2_sandbox"]
+
+[node name="Stage5FBehaviorValidation" type="Node3D"]
+script = ExtResource("1_validation")
+
+[node name="DungeonSandbox" parent="." instance=ExtResource("2_sandbox")]

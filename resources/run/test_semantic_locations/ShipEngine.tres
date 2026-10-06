@@ -1,0 +1,12 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+semantic_id = &"ENGINE_ROOM"
+display_name = "Engine Room"
+allowed_archetypes = [&"ABANDONED_SHIP"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+max_count = 1
+min_depth_from_start = 2
+tags = [&"DESTINATION"]
+future_gameplay_tags = [&"SHIP_PROGRESS_FUTURE"]

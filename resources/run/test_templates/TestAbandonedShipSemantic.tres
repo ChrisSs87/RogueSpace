@@ -1,0 +1,120 @@
+[gd_resource type="Resource" load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://resources/run/DungeonTemplateResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/DungeonGrammarRuleResource.gd" id="2"]
+[ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="3"]
+
+[sub_resource type="Resource" id="Start"]
+script = ExtResource("3")
+stable_id = &"ship_airlock_start"
+roles = [&"START"]
+[sub_resource type="Resource" id="Exit"]
+script = ExtResource("3")
+stable_id = &"ship_airlock_exit"
+roles = [&"EXIT"]
+[sub_resource type="Resource" id="Corridor"]
+script = ExtResource("3")
+stable_id = &"ship_corridor"
+roles = [&"CORRIDOR"]
+tags = [&"TRANSIT"]
+footprint_size = Vector2(12, 4)
+placement_priority = 10
+[sub_resource type="Resource" id="CorridorShort"]
+script = ExtResource("3")
+stable_id = &"ship_corridor_short"
+roles = [&"CORRIDOR"]
+tags = [&"TRANSIT", &"SHORT"]
+footprint_size = Vector2(10, 4)
+connector_sides = [&"west", &"east"]
+[sub_resource type="Resource" id="Room"]
+script = ExtResource("3")
+stable_id = &"ship_destination_room"
+roles = [&"ROOM"]
+tags = [&"DESTINATION"]
+footprint_size = Vector2(10, 10)
+[sub_resource type="Resource" id="TurnLeft"]
+script = ExtResource("3")
+stable_id = &"ship_turn_left"
+roles = [&"TURN_LEFT"]
+tags = [&"TRANSIT"]
+[sub_resource type="Resource" id="TurnRight"]
+script = ExtResource("3")
+stable_id = &"ship_turn_right"
+roles = [&"TURN_RIGHT"]
+tags = [&"TRANSIT"]
+[sub_resource type="Resource" id="Junction"]
+script = ExtResource("3")
+stable_id = &"ship_junction"
+roles = [&"JUNCTION"]
+tags = [&"TRANSIT"]
+supports_branch = true
+[sub_resource type="Resource" id="Side"]
+script = ExtResource("3")
+stable_id = &"ship_side_destination"
+roles = [&"SIDE_ROOM"]
+tags = [&"DESTINATION"]
+footprint_size = Vector2(8, 8)
+supports_main_path = false
+
+[sub_resource type="Resource" id="CorridorRule"]
+script = ExtResource("2")
+role = &"CORRIDOR"
+min_count = 4
+max_count = 7
+selection_weight = 12.0
+max_consecutive = 2
+module_definition = SubResource("Corridor")
+module_variants = [SubResource("CorridorShort")]
+[sub_resource type="Resource" id="RoomRule"]
+script = ExtResource("2")
+role = &"ROOM"
+min_count = 1
+max_count = 3
+selection_weight = 1.0
+max_consecutive = 1
+module_definition = SubResource("Room")
+[sub_resource type="Resource" id="LeftRule"]
+script = ExtResource("2")
+role = &"TURN_LEFT"
+max_count = 1
+selection_weight = 1.0
+module_definition = SubResource("TurnLeft")
+[sub_resource type="Resource" id="RightRule"]
+script = ExtResource("2")
+role = &"TURN_RIGHT"
+max_count = 1
+selection_weight = 1.0
+module_definition = SubResource("TurnRight")
+[sub_resource type="Resource" id="JunctionRule"]
+script = ExtResource("2")
+role = &"JUNCTION"
+min_count = 2
+max_count = 3
+selection_weight = 4.0
+module_definition = SubResource("Junction")
+[sub_resource type="Resource" id="SideRule"]
+script = ExtResource("2")
+role = &"SIDE_ROOM"
+max_count = 3
+main_path_only = false
+module_definition = SubResource("Side")
+
+[resource]
+script = ExtResource("1")
+stable_id = &"TEST_ABANDONED_SHIP_SEMANTIC"
+theme_id = &"TEST_SHIP"
+min_modules = 11
+max_modules = 13
+min_main_path_depth = 6
+max_turns = 1
+allow_loops = true
+min_reconnections = 0
+max_reconnections = 0
+min_reconnection_separation = 2
+max_reconnection_route_segments = 7
+max_reconnection_route_turns = 2
+reconnection_route_roles = [&"CORRIDOR", &"TURN_LEFT", &"TURN_RIGHT"]
+grammar_rules = [SubResource("CorridorRule"), SubResource("RoomRule"), SubResource("LeftRule"), SubResource("RightRule"), SubResource("JunctionRule"), SubResource("SideRule")]
+module_pool = [SubResource("Start"), SubResource("Exit"), SubResource("Corridor"), SubResource("Room"), SubResource("TurnLeft"), SubResource("TurnRight"), SubResource("Junction"), SubResource("Side")]
+lighting_profile_id = &"VERY_LOW_OFFLINE"
+allowed_faction_tags = [&"HORVEX", &"VARKHEM", &"MYKORA"]

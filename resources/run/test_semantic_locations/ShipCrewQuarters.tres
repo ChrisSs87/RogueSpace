@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+semantic_id = &"CREW_QUARTERS"
+display_name = "Crew Quarters"
+allowed_archetypes = [&"ABANDONED_SHIP"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+mandatory = true
+min_count = 1
+max_count = 5
+min_depth_from_start = 1
+tags = [&"DESTINATION"]

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/cards/CardResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_name = "Double Strike"
+stamina_cost = 0
+action_id = "enemy_special_attack"
+value = 10
+description = "Equivalente provisional de doble golpe: 10 daño total."

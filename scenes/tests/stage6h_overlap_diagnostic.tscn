@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/stage6h_overlap_diagnostic.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/world/Stage6GProceduralPrototype.gd" id="2"]
+
+[node name="Stage6HOverlapDiagnostic" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Stage6GProceduralPrototype" type="Node3D" parent="."]
+script = ExtResource("2")

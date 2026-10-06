@@ -1,0 +1,17 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://autoloads/RunState.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/cards/golpe_basico.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/cards/defensa_basica.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/equipment/sword_provisional.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/equipment/shield_provisional.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/equipment/suit_provisional.tres" id="6"]
+
+[node name="RunState" type="Node"]
+script = ExtResource("1")
+base_max_player_health = 30
+max_stamina = 3
+starting_deck = [ExtResource("2"), ExtResource("2"), ExtResource("2"), ExtResource("2"), ExtResource("2"), ExtResource("3"), ExtResource("3"), ExtResource("3"), ExtResource("3"), ExtResource("3")]
+equipped_weapon = ExtResource("4")
+equipped_shield = ExtResource("5")
+equipped_suit = ExtResource("6")

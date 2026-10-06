@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/cards/CardResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_name = "Quick Strike"
+stamina_cost = 0
+action_id = "enemy_basic_attack"
+value = 7
+description = "El pícaro ataca con rapidez."

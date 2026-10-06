@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/stage6k4a_ship_reconnection_closure_diagnostic.gd" id="1"]
+
+[node name="Stage6K4AShipReconnectionClosureDiagnostic" type="Node"]
+script = ExtResource("1")

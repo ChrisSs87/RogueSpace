@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CardResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/cards/CardResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_name = "Golpe de Aguijón"
+action_id = "enemy_poison_attack"
+value = 5
+description = "5 daño y VENENO (2 HP al inicio de cada turno hasta terminar el combate)."

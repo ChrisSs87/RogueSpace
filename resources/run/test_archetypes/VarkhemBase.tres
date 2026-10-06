@@ -1,0 +1,244 @@
+[gd_resource type="Resource" load_steps=33 format=3]
+[ext_resource type="Script" path="res://resources/run/DungeonArchetypeResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/DungeonSectorDefinitionResource.gd" id="2"]
+[ext_resource type="Script" path="res://resources/run/DungeonSectorPathResource.gd" id="3"]
+[ext_resource type="Script" path="res://resources/run/DungeonSizeProfileResource.gd" id="4"]
+[ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="5"]
+[ext_resource type="Resource" path="res://resources/run/test_templates/TestVarkhemBaseSemantic.tres" id="6"]
+[ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="7"]
+
+[sub_resource type="Resource" id="Small"]
+script = ExtResource("4")
+size_id = &"SMALL"
+min_modules = 13
+max_modules = 13
+role_min_counts = {"CORRIDOR": 2, "ROOM": 3, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 4, "ROOM": 4, "JUNCTION": 2}
+[sub_resource type="Resource" id="Medium"]
+script = ExtResource("4")
+size_id = &"MEDIUM"
+min_modules = 17
+max_modules = 17
+role_min_counts = {"CORRIDOR": 2, "ROOM": 4, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 5, "ROOM": 6, "JUNCTION": 3}
+[sub_resource type="Resource" id="Large"]
+script = ExtResource("4")
+size_id = &"LARGE"
+min_modules = 21
+max_modules = 21
+role_min_counts = {"CORRIDOR": 2, "ROOM": 5, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 6, "ROOM": 7, "JUNCTION": 4}
+
+[sub_resource type="Resource" id="CentralHubPhysical"]
+script = ExtResource("7")
+stable_id = &"base_central_hub_large"
+roles = [&"JUNCTION"]
+tags = [&"HUB", &"TRANSIT", &"LARGE"]
+footprint_size = Vector2(16, 16)
+placement_priority = 100
+connector_sides = [&"west", &"east", &"north", &"south"]
+supports_branch = true
+[sub_resource type="Resource" id="BarracksPhysical"]
+script = ExtResource("7")
+stable_id = &"base_barracks"
+roles = [&"ROOM", &"SIDE_ROOM"]
+tags = [&"BARRACKS", &"DESTINATION"]
+footprint_size = Vector2(14, 10)
+placement_priority = 80
+connector_sides = [&"west", &"east"]
+[sub_resource type="Resource" id="PrivatePhysical"]
+script = ExtResource("7")
+stable_id = &"base_varkhem_private_room"
+roles = [&"ROOM", &"SIDE_ROOM"]
+tags = [&"PRIVATE", &"LOW_VALUE_DESTINATION"]
+footprint_size = Vector2(6, 6)
+placement_priority = 80
+connector_sides = [&"west", &"east"]
+[sub_resource type="Resource" id="ArmoryPhysical"]
+script = ExtResource("7")
+stable_id = &"base_armory"
+roles = [&"ROOM", &"SIDE_ROOM"]
+tags = [&"ARMORY", &"HIGH_VALUE_OPTIONAL"]
+footprint_size = Vector2(10, 10)
+placement_priority = 80
+connector_sides = [&"west", &"east"]
+[sub_resource type="Resource" id="FoodPhysical"]
+script = ExtResource("7")
+stable_id = &"base_food_storage"
+roles = [&"ROOM", &"SIDE_ROOM"]
+tags = [&"FOOD_STORAGE", &"DESTINATION"]
+footprint_size = Vector2(10, 8)
+placement_priority = 80
+connector_sides = [&"west", &"east"]
+[sub_resource type="Resource" id="PrisonPhysical"]
+script = ExtResource("7")
+stable_id = &"base_prison"
+roles = [&"ROOM", &"SIDE_ROOM"]
+tags = [&"PRISON", &"DESTINATION"]
+footprint_size = Vector2(12, 10)
+placement_priority = 80
+connector_sides = [&"west", &"east"]
+[sub_resource type="Resource" id="CommandPhysical"]
+script = ExtResource("7")
+stable_id = &"base_command_room"
+roles = [&"ROOM", &"SIDE_ROOM"]
+tags = [&"COMMAND", &"BOSS_ENCOUNTER_FUTURE", &"DESTINATION"]
+footprint_size = Vector2(14, 12)
+placement_priority = 90
+connector_sides = [&"west", &"east"]
+
+[sub_resource type="Resource" id="Access"]
+script = ExtResource("5")
+semantic_id = &"BASE_ACCESS"
+allowed_archetypes = [&"VARKHEM_BASE"]
+allowed_sectors = [&"GROUND_FLOOR"]
+compatible_node_roles = [&"START"]
+mandatory = true
+min_count = 1
+space_kind = 0
+future_gameplay_tags = [&"ABORT_MISSION"]
+[sub_resource type="Resource" id="Barracks"]
+script = ExtResource("5")
+semantic_id = &"BARRACKS"
+allowed_archetypes = [&"VARKHEM_BASE"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+mandatory = true
+min_count = 1
+max_count = 4
+tags = [&"DESTINATION"]
+physical_module_variants = [SubResource("BarracksPhysical")]
+physical_variant_required = true
+[sub_resource type="Resource" id="Private"]
+script = ExtResource("5")
+semantic_id = &"VARKHEM_ROOM"
+allowed_archetypes = [&"VARKHEM_BASE"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+mandatory = true
+min_count = 1
+max_count = 4
+tags = [&"LOW_VALUE_DESTINATION"]
+physical_module_variants = [SubResource("PrivatePhysical")]
+physical_variant_required = true
+[sub_resource type="Resource" id="Armory"]
+script = ExtResource("5")
+semantic_id = &"ARMORY"
+allowed_archetypes = [&"VARKHEM_BASE"]
+compatible_node_roles = [&"SIDE_ROOM", &"ROOM"]
+max_count = 1
+branch_preference = 1
+min_depth_from_start = 2
+tags = [&"HIGH_VALUE_OPTIONAL"]
+future_gameplay_tags = [&"GUARDED_LOOT_FUTURE", &"ELITE_POSSIBLE_FUTURE"]
+physical_module_variants = [SubResource("ArmoryPhysical")]
+physical_variant_required = true
+[sub_resource type="Resource" id="Food"]
+script = ExtResource("5")
+semantic_id = &"FOOD_STORAGE"
+allowed_archetypes = [&"VARKHEM_BASE"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+max_count = 1
+tags = [&"DESTINATION"]
+future_gameplay_tags = [&"HEALING_FUTURE", &"POPULATION_1_TO_2_FUTURE"]
+physical_module_variants = [SubResource("FoodPhysical")]
+physical_variant_required = true
+[sub_resource type="Resource" id="Prison"]
+script = ExtResource("5")
+semantic_id = &"PRISON"
+allowed_archetypes = [&"VARKHEM_BASE"]
+allowed_sectors = [&"BASEMENT"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+mandatory = true
+min_count = 1
+branch_preference = 1
+future_gameplay_tags = [&"GUARDED_FUTURE"]
+physical_module_variants = [SubResource("PrisonPhysical")]
+physical_variant_required = true
+[sub_resource type="Resource" id="Hub"]
+script = ExtResource("5")
+semantic_id = &"CENTRAL_HUB"
+allowed_archetypes = [&"VARKHEM_BASE"]
+allowed_sectors = [&"GROUND_FLOOR"]
+compatible_node_roles = [&"JUNCTION"]
+mandatory = true
+min_count = 1
+space_kind = 0
+main_path_preference = 1
+min_depth_from_start = 2
+future_gameplay_tags = [&"HIGH_POPULATION_FUTURE"]
+physical_module_variants = [SubResource("CentralHubPhysical")]
+physical_variant_required = true
+preferred_connection_count = 3
+[sub_resource type="Resource" id="Command"]
+script = ExtResource("5")
+semantic_id = &"COMMAND_ROOM"
+allowed_archetypes = [&"VARKHEM_BASE"]
+allowed_sectors = [&"GROUND_FLOOR", &"UPPER_FLOOR"]
+preferred_sectors = [&"UPPER_FLOOR"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+mandatory = true
+min_count = 1
+min_depth_from_start = 4
+prefer_far_from_start = true
+future_gameplay_tags = [&"BOSS_ENCOUNTER_FUTURE", &"DUNGEON_OBJECTIVE"]
+physical_module_variants = [SubResource("CommandPhysical")]
+physical_variant_required = true
+
+[sub_resource type="Resource" id="Ground"]
+script = ExtResource("2")
+sector_id = &"GROUND_FLOOR"
+template_pool = [ExtResource("6")]
+size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
+light_profile_id = &"NORMAL_HIGH"
+population_profile_id = &"MEDIUM"
+population_density = 0.55
+allowed_enemy_faction_tags = [&"VARKHEM"]
+semantic_locations = [SubResource("Access"), SubResource("Barracks"), SubResource("Private"), SubResource("Armory"), SubResource("Food")]
+[sub_resource type="Resource" id="Basement"]
+script = ExtResource("2")
+sector_id = &"BASEMENT"
+template_pool = [ExtResource("6")]
+size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
+light_profile_id = &"NORMAL"
+population_profile_id = &"HIGH_RISK"
+population_density = 0.7
+allowed_enemy_faction_tags = [&"VARKHEM"]
+semantic_locations = [SubResource("Prison"), SubResource("Barracks")]
+[sub_resource type="Resource" id="Upper"]
+script = ExtResource("2")
+sector_id = &"UPPER_FLOOR"
+template_pool = [ExtResource("6")]
+size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
+light_profile_id = &"NORMAL_HIGH"
+population_profile_id = &"MEDIUM"
+population_density = 0.6
+allowed_enemy_faction_tags = [&"VARKHEM"]
+semantic_locations = [SubResource("Barracks"), SubResource("Private")]
+[sub_resource type="Resource" id="PathGround"]
+script = ExtResource("3")
+path_id = &"GROUND_ONLY"
+selection_weight = 1.0
+sectors = [SubResource("Ground")]
+[sub_resource type="Resource" id="PathBasement"]
+script = ExtResource("3")
+path_id = &"GROUND_BASEMENT"
+selection_weight = 1.0
+sectors = [SubResource("Ground"), SubResource("Basement")]
+[sub_resource type="Resource" id="PathUpper"]
+script = ExtResource("3")
+path_id = &"GROUND_UPPER"
+selection_weight = 1.0
+sectors = [SubResource("Ground"), SubResource("Upper")]
+
+[resource]
+script = ExtResource("1")
+archetype_id = &"VARKHEM_BASE"
+display_name = "Varkhem Base"
+sector_count_min = 1
+sector_count_max = 2
+sectors = [SubResource("Ground"), SubResource("Basement"), SubResource("Upper")]
+sector_paths = [SubResource("PathGround"), SubResource("PathBasement"), SubResource("PathUpper")]
+semantic_locations = [SubResource("Hub"), SubResource("Command")]
+allowed_enemy_faction_tags = [&"VARKHEM"]
+light_profile_id = &"NORMAL_HIGH"
+population_profile_id = &"MEDIUM"
+population_density = 0.55

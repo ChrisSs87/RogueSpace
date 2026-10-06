@@ -1,0 +1,145 @@
+[gd_resource type="Resource" script_class="DungeonTemplateResource" format=3]
+
+[ext_resource type="Script" path="res://resources/run/DungeonRoleSequenceConstraintResource.gd" id="1_6qf4v"]
+[ext_resource type="Script" path="res://resources/run/DungeonGrammarRuleResource.gd" id="2_q1mxn"]
+[ext_resource type="Script" path="res://resources/run/ContentSlotDefinitionResource.gd" id="3_p8ily"]
+[ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="4_11mur"]
+[ext_resource type="Script" path="res://resources/run/DungeonTemplateResource.gd" id="5_43v0m"]
+
+[sub_resource type="Resource" id="Resource_ch236"]
+script = ExtResource("4_11mur")
+stable_id = &"base_corridor"
+tags = Array[StringName]([&"TRANSIT"])
+roles = Array[StringName]([&"CORRIDOR"])
+footprint_size = Vector2(12, 4)
+connector_sides = Array[StringName]([&"west", &"east"])
+
+[sub_resource type="Resource" id="Resource_7h7ah"]
+script = ExtResource("2_q1mxn")
+role = &"CORRIDOR"
+min_count = 2
+max_count = 6
+selection_weight = 2.0
+max_consecutive = 2
+module_definition = SubResource("Resource_ch236")
+
+[sub_resource type="Resource" id="Resource_sgqvh"]
+script = ExtResource("4_11mur")
+stable_id = &"base_room"
+tags = Array[StringName]([&"DESTINATION"])
+placement_priority = 10
+roles = Array[StringName]([&"ROOM"])
+footprint_size = Vector2(10, 10)
+connector_sides = Array[StringName]([&"west", &"east"])
+
+[sub_resource type="Resource" id="Resource_cqod1"]
+script = ExtResource("4_11mur")
+stable_id = &"base_room_compact"
+tags = Array[StringName]([&"DESTINATION", &"COMPACT"])
+roles = Array[StringName]([&"ROOM"])
+connector_sides = Array[StringName]([&"west", &"east"])
+
+[sub_resource type="Resource" id="Resource_o7lid"]
+script = ExtResource("2_q1mxn")
+role = &"ROOM"
+min_count = 3
+max_count = 6
+selection_weight = 10.0
+max_consecutive = 2
+module_definition = SubResource("Resource_sgqvh")
+module_variants = Array[ExtResource("4_11mur")]([SubResource("Resource_cqod1")])
+
+[sub_resource type="Resource" id="Resource_movy0"]
+script = ExtResource("4_11mur")
+stable_id = &"base_turn_left"
+roles = Array[StringName]([&"TURN_LEFT"])
+connector_sides = Array[StringName]([&"west", &"north"])
+
+[sub_resource type="Resource" id="Resource_4ghum"]
+script = ExtResource("2_q1mxn")
+role = &"TURN_LEFT"
+max_count = 2
+selection_weight = 2.0
+module_definition = SubResource("Resource_movy0")
+
+[sub_resource type="Resource" id="Resource_n1onf"]
+script = ExtResource("4_11mur")
+stable_id = &"base_turn_right"
+roles = Array[StringName]([&"TURN_RIGHT"])
+connector_sides = Array[StringName]([&"west", &"south"])
+
+[sub_resource type="Resource" id="Resource_pc77d"]
+script = ExtResource("2_q1mxn")
+role = &"TURN_RIGHT"
+max_count = 2
+selection_weight = 2.0
+module_definition = SubResource("Resource_n1onf")
+
+[sub_resource type="Resource" id="Resource_0or1a"]
+script = ExtResource("4_11mur")
+stable_id = &"base_hub_junction"
+tags = Array[StringName]([&"HUB", &"TRANSIT"])
+placement_priority = 10
+roles = Array[StringName]([&"JUNCTION"])
+connector_sides = Array[StringName]([&"west", &"east", &"north"])
+supports_branch = true
+
+[sub_resource type="Resource" id="Resource_ins7y"]
+script = ExtResource("4_11mur")
+stable_id = &"base_hub_junction_south"
+tags = Array[StringName]([&"HUB", &"TRANSIT", &"SOUTH_BRANCH"])
+roles = Array[StringName]([&"JUNCTION"])
+connector_sides = Array[StringName]([&"west", &"east", &"south"])
+supports_branch = true
+
+[sub_resource type="Resource" id="Resource_5xh27"]
+script = ExtResource("2_q1mxn")
+role = &"JUNCTION"
+min_count = 2
+max_count = 4
+selection_weight = 7.0
+min_depth_from_start = 2
+module_definition = SubResource("Resource_0or1a")
+module_variants = Array[ExtResource("4_11mur")]([SubResource("Resource_ins7y")])
+
+[sub_resource type="Resource" id="Resource_hmqyl"]
+script = ExtResource("4_11mur")
+stable_id = &"base_branch_destination"
+tags = Array[StringName]([&"DESTINATION"])
+roles = Array[StringName]([&"SIDE_ROOM"])
+connector_sides = Array[StringName]([&"west"])
+supports_main_path = false
+
+[sub_resource type="Resource" id="Resource_btub6"]
+script = ExtResource("2_q1mxn")
+role = &"SIDE_ROOM"
+max_count = 4
+main_path_only = false
+module_definition = SubResource("Resource_hmqyl")
+
+[sub_resource type="Resource" id="Resource_hxk8o"]
+script = ExtResource("4_11mur")
+stable_id = &"base_access_start"
+roles = Array[StringName]([&"START"])
+connector_sides = Array[StringName]([&"east"])
+
+[sub_resource type="Resource" id="Resource_q13rm"]
+script = ExtResource("4_11mur")
+stable_id = &"base_exit"
+roles = Array[StringName]([&"EXIT"])
+connector_sides = Array[StringName]([&"west"])
+
+[resource]
+script = ExtResource("5_43v0m")
+stable_id = &"TEST_VARKHEM_BASE_SEMANTIC"
+theme_id = &"TEST_BASE"
+min_modules = 13
+max_modules = 21
+module_pool = Array[Resource]([SubResource("Resource_hxk8o"), SubResource("Resource_q13rm"), SubResource("Resource_ch236"), SubResource("Resource_sgqvh"), SubResource("Resource_movy0"), SubResource("Resource_n1onf"), SubResource("Resource_0or1a"), SubResource("Resource_ins7y"), SubResource("Resource_hmqyl")])
+lighting_profile_id = &"NORMAL_HIGH"
+max_turns = 2
+branch_length = 2
+grammar_rules = Array[ExtResource("2_q1mxn")]([SubResource("Resource_7h7ah"), SubResource("Resource_o7lid"), SubResource("Resource_4ghum"), SubResource("Resource_pc77d"), SubResource("Resource_5xh27"), SubResource("Resource_btub6")])
+min_main_path_depth = 7
+enforce_walkable_containment = true
+allowed_faction_tags = Array[StringName]([&"VARKHEM"])

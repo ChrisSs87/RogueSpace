@@ -1,0 +1,28 @@
+[gd_resource type="Resource" load_steps=7 format=3]
+[ext_resource type="Script" path="res://resources/run/ContentPlacementProfileResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/ContentCategoryWeightResource.gd" id="2"]
+[sub_resource type="Resource" id="Loot"]
+script = ExtResource("2")
+category = &"LOOT"
+weight = 6.0
+[sub_resource type="Resource" id="Event"]
+script = ExtResource("2")
+category = &"EVENT"
+weight = 5.0
+[sub_resource type="Resource" id="Interaction"]
+script = ExtResource("2")
+category = &"INTERACTION"
+weight = 4.0
+[sub_resource type="Resource" id="Special"]
+script = ExtResource("2")
+category = &"SPECIAL"
+weight = 2.0
+[resource]
+script = ExtResource("1")
+stable_id = &"TEST_EXPLORATION"
+display_name = "Exploration"
+min_slots = 3
+max_slots = 6
+category_weights = [SubResource("Loot"), SubResource("Event"), SubResource("Interaction"), SubResource("Special")]
+forbidden_node_roles = [&"START", &"EXIT"]
+max_slots_per_node = 1

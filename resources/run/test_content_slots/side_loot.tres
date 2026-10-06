@@ -1,0 +1,10 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/run/ContentSlotDefinitionResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+stable_id = &"loot"
+category = &"LOOT"
+local_position = Vector3(0, 0.25, 0)
+tags = [&"TEST", &"OPTIONAL", &"SIDE"]

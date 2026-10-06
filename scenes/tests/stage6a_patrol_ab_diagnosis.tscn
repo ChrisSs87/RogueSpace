@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/stage6a_patrol_ab_diagnosis.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/MainFortress6A.tscn" id="2_main"]
+
+[node name="Stage6APatrolABDiagnosis" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="MainFortress6A" parent="." instance=ExtResource("2_main")]

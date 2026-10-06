@@ -1,0 +1,101 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/modules/fortress/RoomSmall.tscn" id="1_room"]
+[ext_resource type="PackedScene" path="res://scenes/modules/fortress/CorridorStraight.tscn" id="2_corridor"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="3_enemy"]
+[ext_resource type="Script" path="res://scripts/tests/stage6a_navigation_bake_prototype.gd" id="4_script"]
+[ext_resource type="Resource" path="res://resources/enemies/orco_melee.tres" id="5_enemy_resource"]
+
+[sub_resource type="StandardMaterial3D" id="WallMaterial"]
+albedo_color = Color(0.34, 0.31, 0.27, 1)
+
+[node name="Stage6ANavigationBakePrototype" type="Node3D"]
+script = ExtResource("4_script")
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+
+[node name="RoomA" parent="." instance=ExtResource("1_room")]
+
+[node name="Corridor" parent="." instance=ExtResource("2_corridor")]
+position = Vector3(8, 0, 0)
+
+[node name="RoomB" parent="." instance=ExtResource("1_room")]
+position = Vector3(16, 0, 0)
+
+[node name="ArchitectureWalls" type="Node3D" parent="."]
+
+[node name="RoomAWest" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(-4, 1.5, 0)
+use_collision = true
+size = Vector3(0.3, 3, 8)
+material = SubResource("WallMaterial")
+
+[node name="RoomANorth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(0, 1.5, 4)
+use_collision = true
+size = Vector3(8, 3, 0.3)
+material = SubResource("WallMaterial")
+
+[node name="RoomASouth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(0, 1.5, -4)
+use_collision = true
+size = Vector3(8, 3, 0.3)
+material = SubResource("WallMaterial")
+
+[node name="RoomAEastNorth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(4, 1.5, 2.675)
+use_collision = true
+size = Vector3(0.3, 3, 2.65)
+material = SubResource("WallMaterial")
+
+[node name="RoomAEastSouth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(4, 1.5, -2.675)
+use_collision = true
+size = Vector3(0.3, 3, 2.65)
+material = SubResource("WallMaterial")
+
+[node name="CorridorNorth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(8, 1.5, 1.5)
+use_collision = true
+size = Vector3(8, 3, 0.3)
+material = SubResource("WallMaterial")
+
+[node name="CorridorSouth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(8, 1.5, -1.5)
+use_collision = true
+size = Vector3(8, 3, 0.3)
+material = SubResource("WallMaterial")
+
+[node name="RoomBWestNorth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(12, 1.5, 2.675)
+use_collision = true
+size = Vector3(0.3, 3, 2.65)
+material = SubResource("WallMaterial")
+
+[node name="RoomBWestSouth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(12, 1.5, -2.675)
+use_collision = true
+size = Vector3(0.3, 3, 2.65)
+material = SubResource("WallMaterial")
+
+[node name="RoomBEast" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(20, 1.5, 0)
+use_collision = true
+size = Vector3(0.3, 3, 8)
+material = SubResource("WallMaterial")
+
+[node name="RoomBNorth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(16, 1.5, 4)
+use_collision = true
+size = Vector3(8, 3, 0.3)
+material = SubResource("WallMaterial")
+
+[node name="RoomBSouth" type="CSGBox3D" parent="ArchitectureWalls"]
+position = Vector3(16, 1.5, -4)
+use_collision = true
+size = Vector3(8, 3, 0.3)
+material = SubResource("WallMaterial")
+
+[node name="Enemy" parent="." instance=ExtResource("3_enemy")]
+position = Vector3(0, 1, 0)
+enemy_resource = ExtResource("5_enemy_resource")

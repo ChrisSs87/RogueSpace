@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/stage6i_content_placement_validation.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/world/Stage6GProceduralPrototype.gd" id="2"]
+
+[node name="Stage6IContentPlacementValidation" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Stage6GProceduralPrototype" type="Node3D" parent="."]
+script = ExtResource("2")
+initial_seed = 62001
+test_template_index = 1
+test_content_profile_index = 0

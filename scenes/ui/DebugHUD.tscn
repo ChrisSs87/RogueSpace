@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/DebugHUD.gd" id="1"]
+
+[node name="DebugHUD" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PlayerInfoLabel" type="Label" parent="Root"]
+mouse_filter = 2
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_right = 150.0
+offset_top = 110.0
+offset_bottom = 235.0
+theme_override_colors/font_color = Color(1, 0.9, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+text = "PLAYER\nLIGHT: N/A\nMOVEMENT: N/A\nNOISE RADIUS: N/A\nNOISE INTENSITY: N/A"
+
+[node name="InfoLabel" type="Label" parent="Root"]
+mouse_filter = 2
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 520.0
+offset_bottom = 340.0
+theme_override_font_sizes/font_size = 16
+text = "[ DEBUG ]"
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="Root"]
+mouse_filter = 2
+offset_left = 20.0
+offset_top = 345.0
+offset_right = 520.0
+offset_bottom = 385.0
+theme_override_constants/separation = 10
+
+[node name="AddOrcoButton" type="Button" parent="Root/ButtonsContainer"]
+text = "+1 ADN Orco"
+
+[node name="AddXenoButton" type="Button" parent="Root/ButtonsContainer"]
+text = "+1 ADN Xeno"
+
+[node name="ResetButton" type="Button" parent="Root/ButtonsContainer"]
+text = "Reset run"
+
+[node name="PerceptionButton" type="Button" parent="Root/ButtonsContainer"]
+text = "Percepción: ON"

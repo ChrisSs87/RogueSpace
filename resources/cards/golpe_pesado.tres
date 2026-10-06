@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CardResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/cards/CardResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_name = "Golpe Pesado"
+stamina_cost = 3
+category = "attack"
+action_id = "player_heavy_attack"
+value = 25
+description = "Golpe contundente: 25 de daño fijo."

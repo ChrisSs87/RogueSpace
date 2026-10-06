@@ -1,0 +1,211 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/RewardUI.gd" id="1"]
+
+[node name="RewardUI" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="DimBackground" type="ColorRect" parent="Root"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="SummaryPanel" type="VBoxContainer" parent="Root"]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_right = 220.0
+offset_top = -140.0
+offset_bottom = 140.0
+mouse_filter = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="SummaryLabel" type="Label" parent="Root/SummaryPanel"]
+mouse_filter = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Recompensas obtenidas"
+
+[node name="ContinueButton" type="Button" parent="Root/SummaryPanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Continuar"
+
+[node name="DNAChoicePanel" type="VBoxContainer" parent="Root"]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_right = 180.0
+offset_top = -140.0
+offset_bottom = 140.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="SpeciesLabel" type="Label" parent="Root/DNAChoicePanel"]
+mouse_filter = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "ADN obtenido"
+
+[node name="WeaponButton" type="Button" parent="Root/DNAChoicePanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Espada"
+
+[node name="ShieldButton" type="Button" parent="Root/DNAChoicePanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Escudo"
+
+[node name="SuitButton" type="Button" parent="Root/DNAChoicePanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Traje"
+
+[node name="MessagePanel" type="VBoxContainer" parent="Root"]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_right = 220.0
+offset_top = -100.0
+offset_bottom = 100.0
+mouse_filter = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="MessageLabel" type="Label" parent="Root/MessagePanel"]
+mouse_filter = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Mensaje"
+
+[node name="ContinueButton" type="Button" parent="Root/MessagePanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Continuar"
+
+[node name="CardUnlockedPanel" type="VBoxContainer" parent="Root"]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_right = 240.0
+offset_top = -160.0
+offset_bottom = 160.0
+mouse_filter = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="CardUnlockedLabel" type="Label" parent="Root/CardUnlockedPanel"]
+mouse_filter = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Nueva carta desbloqueada"
+
+[node name="IncorporateButton" type="Button" parent="Root/CardUnlockedPanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Incorporar al mazo"
+
+[node name="LeaveOutButton" type="Button" parent="Root/CardUnlockedPanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Dejar fuera del mazo"
+
+[node name="CardReplacePanel" type="VBoxContainer" parent="Root"]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_right = 220.0
+offset_top = -230.0
+offset_bottom = 230.0
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Root/CardReplacePanel"]
+mouse_filter = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Elegí una carta para reemplazar:"
+
+[node name="ReplaceSlotsContainer" type="VBoxContainer" parent="Root/CardReplacePanel"]
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="ReplaceSlot0" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot1" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot2" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot3" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot4" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot5" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot6" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot7" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot8" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="ReplaceSlot9" type="Button" parent="Root/CardReplacePanel/ReplaceSlotsContainer"]
+custom_minimum_size = Vector2(0, 36)
+text = "—"
+
+[node name="KitOfferPanel" type="VBoxContainer" parent="Root"]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_right = 180.0
+offset_top = -100.0
+offset_bottom = 100.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="KitLabel" type="Label" parent="Root/KitOfferPanel"]
+mouse_filter = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Encontraste un Kit de Primeros Auxilios (+15 HP)"
+
+[node name="UseKitButton" type="Button" parent="Root/KitOfferPanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Usar"
+
+[node name="DeclineKitButton" type="Button" parent="Root/KitOfferPanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "Descartar"

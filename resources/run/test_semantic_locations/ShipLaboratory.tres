@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+semantic_id = &"LABORATORY"
+display_name = "Laboratory"
+allowed_archetypes = [&"ABANDONED_SHIP"]
+allowed_size_profiles = [&"LARGE"]
+compatible_node_roles = [&"ROOM", &"SIDE_ROOM"]
+max_count = 1
+branch_preference = 1
+min_depth_from_start = 2
+tags = [&"DESTINATION", &"HIGH_RISK_OPTIONAL"]
+future_gameplay_tags = [&"ELITE_ENCOUNTER_FUTURE"]

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="ShieldResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/equipment/ShieldResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+shield_name = "Escudo Provisional"
+base_block = 6
