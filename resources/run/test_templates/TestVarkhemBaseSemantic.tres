@@ -1,10 +1,12 @@
-[gd_resource type="Resource" script_class="DungeonTemplateResource" format=3]
+[gd_resource type="Resource" script_class="DungeonTemplateResource" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://resources/run/DungeonRoleSequenceConstraintResource.gd" id="1_6qf4v"]
 [ext_resource type="Script" path="res://resources/run/DungeonGrammarRuleResource.gd" id="2_q1mxn"]
 [ext_resource type="Script" path="res://resources/run/ContentSlotDefinitionResource.gd" id="3_p8ily"]
 [ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="4_11mur"]
 [ext_resource type="Script" path="res://resources/run/DungeonTemplateResource.gd" id="5_43v0m"]
+[ext_resource type="Resource" path="res://resources/run/test_content_profiles/VarkhemEncounterV1.tres" id="6_runtime_profile"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_encounter_room.tres" id="7_encounter_room"]
 
 [sub_resource type="Resource" id="Resource_ch236"]
 script = ExtResource("4_11mur")
@@ -31,6 +33,7 @@ placement_priority = 10
 roles = Array[StringName]([&"ROOM"])
 footprint_size = Vector2(10, 10)
 connector_sides = Array[StringName]([&"west", &"east"])
+content_slots = [ExtResource("7_encounter_room")]
 
 [sub_resource type="Resource" id="Resource_cqod1"]
 script = ExtResource("4_11mur")
@@ -38,6 +41,7 @@ stable_id = &"base_room_compact"
 tags = Array[StringName]([&"DESTINATION", &"COMPACT"])
 roles = Array[StringName]([&"ROOM"])
 connector_sides = Array[StringName]([&"west", &"east"])
+content_slots = [ExtResource("7_encounter_room")]
 
 [sub_resource type="Resource" id="Resource_o7lid"]
 script = ExtResource("2_q1mxn")
@@ -109,6 +113,7 @@ tags = Array[StringName]([&"DESTINATION"])
 roles = Array[StringName]([&"SIDE_ROOM"])
 connector_sides = Array[StringName]([&"west"])
 supports_main_path = false
+content_slots = [ExtResource("7_encounter_room")]
 
 [sub_resource type="Resource" id="Resource_btub6"]
 script = ExtResource("2_q1mxn")
@@ -143,3 +148,4 @@ grammar_rules = Array[ExtResource("2_q1mxn")]([SubResource("Resource_7h7ah"), Su
 min_main_path_depth = 7
 enforce_walkable_containment = true
 allowed_faction_tags = Array[StringName]([&"VARKHEM"])
+content_placement_profile = ExtResource("6_runtime_profile")

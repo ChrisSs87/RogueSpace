@@ -1,0 +1,48 @@
+[gd_resource type="Resource" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://resources/run/ContentPlacementProfileResource.gd" id="1_profile"]
+[ext_resource type="Script" path="res://resources/run/ContentCategoryWeightResource.gd" id="2_weight"]
+[ext_resource type="Script" path="res://resources/run/ContentRuntimeCategoryPoolResource.gd" id="3_runtime_pool"]
+[ext_resource type="Script" path="res://resources/run/WeightedPoolResource.gd" id="4_pool"]
+[ext_resource type="Script" path="res://resources/run/WeightedEntryResource.gd" id="5_entry"]
+[ext_resource type="Resource" path="res://resources/enemies/orco_melee.tres" id="6_melee"]
+[ext_resource type="Resource" path="res://resources/enemies/orco_picaro.tres" id="7_raptor"]
+
+[sub_resource type="Resource" id="EncounterWeight"]
+script = ExtResource("2_weight")
+category = &"ENCOUNTER"
+weight = 1.0
+
+[sub_resource type="Resource" id="MeleeEntry"]
+script = ExtResource("5_entry")
+stable_id = &"varkhen_carnotauro"
+payload = ExtResource("6_melee")
+weight = 1.0
+
+[sub_resource type="Resource" id="RaptorEntry"]
+script = ExtResource("5_entry")
+stable_id = &"varkhen_raptor"
+payload = ExtResource("7_raptor")
+weight = 1.0
+
+[sub_resource type="Resource" id="VarkhemEnemyPool"]
+script = ExtResource("4_pool")
+entries = [SubResource("MeleeEntry"), SubResource("RaptorEntry")]
+
+[sub_resource type="Resource" id="EncounterRuntimePool"]
+script = ExtResource("3_runtime_pool")
+category = &"ENCOUNTER"
+pool = SubResource("VarkhemEnemyPool")
+
+[resource]
+script = ExtResource("1_profile")
+stable_id = &"VARKHEM_ENCOUNTER_V1"
+display_name = "Varkhem Encounter V1"
+min_slots = 2
+max_slots = 4
+category_weights = [SubResource("EncounterWeight")]
+allowed_node_roles = [&"ROOM", &"SIDE_ROOM"]
+forbidden_node_roles = [&"START", &"EXIT"]
+max_slots_per_node = 1
+runtime_category_pools = [SubResource("EncounterRuntimePool")]
+fallback_to_idle_without_patrol_points = true
