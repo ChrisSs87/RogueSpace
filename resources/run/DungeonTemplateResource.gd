@@ -22,6 +22,17 @@ class_name DungeonTemplateResource
 @export_range(1, 4) var branch_length := 1
 @export var branch_transit_roles: Array[StringName] = [&"CORRIDOR"]
 @export var branch_destination_role: StringName = &"SIDE_ROOM"
+## Distribución declarativa opcional. Cuando está vacía, RunDirector conserva
+## sin cambios la expansión legacy de ramas por JUNCTION.
+@export var branch_rules: Array[DungeonBranchRuleResource] = []
+## Presupuesto global opcional de destinos creados por branch_rules. Sirve
+## para que varias reglas compartan una cantidad variable de hijos sin fijar
+## la distribución de cada parent. Cero/-1 conserva la suma de las reglas.
+@export_range(0, 64) var min_distribution_destinations := 0
+@export var max_distribution_destinations := -1
+## Espina opcional del camino principal. Vacía preserva la gramática legacy;
+## cuando existe, sólo fija relaciones estructurales iniciales, no un plano.
+@export var main_path_prefix_roles: Array[StringName] = []
 
 ## Gramática 6H. Si está vacía, RunDirector conserva el comportamiento legacy
 ## 6G. Las reglas viven en Resources para que un futuro bioma no necesite

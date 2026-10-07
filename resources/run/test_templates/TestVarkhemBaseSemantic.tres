@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DungeonTemplateResource" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="DungeonTemplateResource" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://resources/run/DungeonRoleSequenceConstraintResource.gd" id="1_6qf4v"]
 [ext_resource type="Script" path="res://resources/run/DungeonGrammarRuleResource.gd" id="2_q1mxn"]
@@ -7,14 +7,25 @@
 [ext_resource type="Script" path="res://resources/run/DungeonTemplateResource.gd" id="5_43v0m"]
 [ext_resource type="Resource" path="res://resources/run/test_content_profiles/VarkhemEncounterV1.tres" id="6_runtime_profile"]
 [ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_encounter_room.tres" id="7_encounter_room"]
+[ext_resource type="Script" path="res://resources/run/DungeonBranchRuleResource.gd" id="8_branch_rule"]
 
 [sub_resource type="Resource" id="Resource_ch236"]
 script = ExtResource("4_11mur")
 stable_id = &"base_corridor"
 tags = Array[StringName]([&"TRANSIT"])
 roles = Array[StringName]([&"CORRIDOR"])
-footprint_size = Vector2(12, 4)
+footprint_size = Vector2(14, 5)
 connector_sides = Array[StringName]([&"west", &"east"])
+
+[sub_resource type="Resource" id="Resource_distribution_corridor"]
+script = ExtResource("4_11mur")
+stable_id = &"base_distributor_corridor"
+tags = Array[StringName]([&"TRANSIT", &"DISTRIBUTION"])
+roles = Array[StringName]([&"CORRIDOR"])
+footprint_size = Vector2(14, 6)
+placement_priority = 40
+connector_sides = Array[StringName]([&"west", &"east", &"north", &"south"])
+supports_branch = true
 
 [sub_resource type="Resource" id="Resource_7h7ah"]
 script = ExtResource("2_q1mxn")
@@ -46,10 +57,11 @@ content_slots = [ExtResource("7_encounter_room")]
 [sub_resource type="Resource" id="Resource_o7lid"]
 script = ExtResource("2_q1mxn")
 role = &"ROOM"
-min_count = 3
-max_count = 6
+min_count = 0
+max_count = 0
 selection_weight = 10.0
 max_consecutive = 2
+main_path_allowed = false
 module_definition = SubResource("Resource_sgqvh")
 module_variants = Array[ExtResource("4_11mur")]([SubResource("Resource_cqod1")])
 
@@ -85,7 +97,7 @@ stable_id = &"base_hub_junction"
 tags = Array[StringName]([&"HUB", &"TRANSIT"])
 placement_priority = 10
 roles = Array[StringName]([&"JUNCTION"])
-connector_sides = Array[StringName]([&"west", &"east", &"north"])
+connector_sides = Array[StringName]([&"west", &"east", &"north", &"south"])
 supports_branch = true
 
 [sub_resource type="Resource" id="Resource_ins7y"]
@@ -102,6 +114,7 @@ role = &"JUNCTION"
 min_count = 2
 max_count = 4
 selection_weight = 7.0
+max_consecutive = 1
 min_depth_from_start = 2
 module_definition = SubResource("Resource_0or1a")
 module_variants = Array[ExtResource("4_11mur")]([SubResource("Resource_ins7y")])
@@ -134,17 +147,61 @@ stable_id = &"base_exit"
 roles = Array[StringName]([&"EXIT"])
 connector_sides = Array[StringName]([&"west"])
 
+[sub_resource type="Resource" id="Resource_hub_distribution"]
+script = ExtResource("8_branch_rule")
+stable_id = &"HUB_DISTRIBUTION"
+parent_selectors = Array[StringName]([&"JUNCTION"])
+min_parent_count = 1
+max_parent_count = 1
+min_parent_depth = 2
+max_parent_depth = 6
+distribution_clearance_main_path_radius = 3
+max_turns_in_distribution_clearance = 1
+parent_selection = 1
+min_total_children = 1
+max_total_children = 2
+min_children_per_parent = 1
+max_children_per_parent = 2
+destination_role = &"ROOM"
+parent_plan_tag = &"HUB_DISTRIBUTION"
+parent_module_variants = Array[ExtResource("4_11mur")]([SubResource("Resource_0or1a")])
+parent_variant_required = true
+
+[sub_resource type="Resource" id="Resource_corridor_distribution"]
+script = ExtResource("8_branch_rule")
+stable_id = &"CORRIDOR_DISTRIBUTION"
+parent_selectors = Array[StringName]([&"CORRIDOR"])
+min_parent_count = 1
+max_parent_count = 2
+min_parent_depth = 3
+distribution_clearance_main_path_radius = 3
+max_turns_in_distribution_clearance = 1
+parent_after_plan_tag = &"HUB_DISTRIBUTION"
+parent_selection = 1
+min_total_children = 1
+max_total_children = 2
+min_children_per_parent = 1
+max_children_per_parent = 2
+destination_role = &"ROOM"
+parent_plan_tag = &"CORRIDOR_DISTRIBUTION"
+parent_module_variants = Array[ExtResource("4_11mur")]([SubResource("Resource_distribution_corridor")])
+parent_variant_required = true
+
 [resource]
 script = ExtResource("5_43v0m")
 stable_id = &"TEST_VARKHEM_BASE_SEMANTIC"
 theme_id = &"TEST_BASE"
 min_modules = 13
 max_modules = 21
-module_pool = Array[Resource]([SubResource("Resource_hxk8o"), SubResource("Resource_q13rm"), SubResource("Resource_ch236"), SubResource("Resource_sgqvh"), SubResource("Resource_movy0"), SubResource("Resource_n1onf"), SubResource("Resource_0or1a"), SubResource("Resource_ins7y"), SubResource("Resource_hmqyl")])
+module_pool = Array[Resource]([SubResource("Resource_hxk8o"), SubResource("Resource_q13rm"), SubResource("Resource_ch236"), SubResource("Resource_distribution_corridor"), SubResource("Resource_sgqvh"), SubResource("Resource_movy0"), SubResource("Resource_n1onf"), SubResource("Resource_0or1a"), SubResource("Resource_ins7y"), SubResource("Resource_hmqyl")])
 lighting_profile_id = &"NORMAL_HIGH"
 max_turns = 2
 branch_length = 2
 grammar_rules = Array[ExtResource("2_q1mxn")]([SubResource("Resource_7h7ah"), SubResource("Resource_o7lid"), SubResource("Resource_4ghum"), SubResource("Resource_pc77d"), SubResource("Resource_5xh27"), SubResource("Resource_btub6")])
+branch_rules = Array[ExtResource("8_branch_rule")]([SubResource("Resource_hub_distribution"), SubResource("Resource_corridor_distribution")])
+min_distribution_destinations = 3
+max_distribution_destinations = 4
+main_path_prefix_roles = Array[StringName]([&"CORRIDOR", &"JUNCTION", &"CORRIDOR"])
 min_main_path_depth = 7
 enforce_walkable_containment = true
 allowed_faction_tags = Array[StringName]([&"VARKHEM"])

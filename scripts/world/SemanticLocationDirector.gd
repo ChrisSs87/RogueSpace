@@ -15,7 +15,13 @@ func populate(plan: DungeonPlan, archetype: DungeonArchetypeResource, sector: Du
 	var occupied: Dictionary = {}
 	var ordered := definitions.duplicate()
 	ordered.sort_custom(func(a: SemanticLocationResource, b: SemanticLocationResource) -> bool:
-		return (1 if a.mandatory else 0) > (1 if b.mandatory else 0))
+		var mandatory_a := 1 if a.mandatory else 0
+		var mandatory_b := 1 if b.mandatory else 0
+		if mandatory_a != mandatory_b:
+			return mandatory_a > mandatory_b
+		if a.assignment_priority != b.assignment_priority:
+			return a.assignment_priority > b.assignment_priority
+		return false)
 	for definition in ordered:
 		if definition == null or not _matches_context(definition, archetype, sector, size_profile):
 			continue
@@ -123,6 +129,9 @@ func _node_matches(plan: DungeonPlan, node_id: StringName, definition: SemanticL
 	var depth := int(plan.node_depths.get(node_id, -1))
 	if depth < definition.min_depth_from_start:
 		return false
+	for required_tag in definition.required_plan_tags:
+		if not (plan.node_tags.get(node_id, []) as Array).has(required_tag):
+			return false
 	var main := plan.main_path_nodes.has(node_id)
 	var branch := plan.branch_nodes.has(node_id)
 	if definition.main_path_preference == SemanticLocationResource.Preference.PROHIBITED and main:

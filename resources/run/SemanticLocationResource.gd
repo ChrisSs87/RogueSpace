@@ -17,7 +17,13 @@ enum Preference { ALLOWED, PREFERRED, PROHIBITED }
 @export_range(0, 16) var min_count := 0
 @export_range(0, 16) var max_count := 1
 @export_range(0.0, 100.0, 0.1) var selection_weight := 1.0
+## Desempate declarativo entre ubicaciones obligatorias. Cero conserva el
+## orden de Resource existente; valores mayores reservan antes su candidato.
+@export_range(-100, 100) var assignment_priority := 0
 @export var preferred_size_tag: StringName
+## Tags estructurales opcionales del DungeonPlan. Si se declaran, todos deben
+## existir en el candidato; vacío conserva la selección legacy.
+@export var required_plan_tags: Array[StringName] = []
 ## Variantes físicas preferidas para este significado. El plan conserva su
 ## ROLE lógico; el assembler recibe estas opciones antes que el kit genérico.
 ## Así una semantic location puede expresar jerarquía espacial sin un segundo

@@ -94,17 +94,41 @@ func _build_grammar_plan(template: DungeonTemplateResource, generation_attempt :
 	var total_modules := local_rng.randi_range(template.min_modules, template.max_modules)
 	var junction_rule := _grammar_rule(template, &"JUNCTION")
 	var side_rule := _grammar_rule(template, &"SIDE_ROOM")
-	var min_branches := junction_rule.min_count if junction_rule != null and not junction_rule.forbidden else 0
-	var max_branches := junction_rule.max_count if junction_rule != null and junction_rule.max_count >= 0 else 0
-	max_branches = mini(max_branches, maxi(0, (total_modules - 3) / (template.branch_length + 1)))
-	var branch_count := local_rng.randi_range(min_branches, max_branches) if max_branches >= min_branches else min_branches
-	var main_interior := total_modules - 2 - branch_count * template.branch_length
-	main_interior = maxi(main_interior, template.min_main_path_depth)
-	if template.max_main_path_depth >= 0:
-		main_interior = mini(main_interior, template.max_main_path_depth)
-	# Una rama ocupa un SIDE_ROOM además del JUNCTION; si el límite de profundidad
-	# ajustó el camino, volver a derivar el total real de módulos es intencional.
-	branch_count = mini(branch_count, maxi(0, main_interior - 1))
+	var uses_distribution_rules := not template.branch_rules.is_empty()
+	var branch_count := 0
+	var distribution_destination_budget := 0
+	var required_junctions := 0
+	var main_interior := 0
+	if uses_distribution_rules:
+		distribution_destination_budget = _choose_distribution_destination_budget(template, total_modules, local_rng)
+		if distribution_destination_budget < 0:
+			plan.generation_error = "No feasible module budget for configured distribution rules"
+			return plan
+		main_interior = total_modules - 2 - distribution_destination_budget
+		if main_interior < template.min_main_path_depth or (template.max_main_path_depth >= 0 and main_interior > template.max_main_path_depth):
+			plan.generation_error = "Distribution budget cannot satisfy main-path depth"
+			return plan
+		if junction_rule != null and not junction_rule.forbidden:
+			var junction_min := junction_rule.min_count
+			var junction_max := junction_rule.max_count if junction_rule.max_count >= 0 else junction_min
+			junction_min = maxi(junction_min, _minimum_junctions_for_main_capacity(template, main_interior))
+			if junction_min > junction_max:
+				plan.generation_error = "Distribution main path exceeds configured transit-role capacity"
+				return plan
+			required_junctions = local_rng.randi_range(junction_min, junction_max) if junction_max > junction_min else junction_min
+	else:
+		var min_branches := junction_rule.min_count if junction_rule != null and not junction_rule.forbidden else 0
+		var max_branches := junction_rule.max_count if junction_rule != null and junction_rule.max_count >= 0 else 0
+		max_branches = mini(max_branches, maxi(0, (total_modules - 3) / (template.branch_length + 1)))
+		branch_count = local_rng.randi_range(min_branches, max_branches) if max_branches >= min_branches else min_branches
+		main_interior = total_modules - 2 - branch_count * template.branch_length
+		main_interior = maxi(main_interior, template.min_main_path_depth)
+		if template.max_main_path_depth >= 0:
+			main_interior = mini(main_interior, template.max_main_path_depth)
+		# Una rama ocupa un SIDE_ROOM además del JUNCTION; si el límite de profundidad
+		# ajustó el camino, volver a derivar el total real de módulos es intencional.
+		branch_count = mini(branch_count, maxi(0, main_interior - 1))
+		required_junctions = branch_count
 	plan.module_ids = [&"START"]
 	plan.module_types[&"START"] = &"START"
 	plan.main_path_nodes[&"START"] = true
@@ -119,7 +143,14 @@ func _build_grammar_plan(template: DungeonTemplateResource, generation_attempt :
 	var previous_id: StringName = &"START"
 	var junction_ids: Array[StringName] = []
 	for index in range(main_interior):
-		var role := _choose_grammar_role(template, counts, previous_role, previous_run, main_interior - index, branch_count, main_path_history, local_rng)
+		var role: StringName = &""
+		if index < template.main_path_prefix_roles.size():
+			var prefix_role: StringName = template.main_path_prefix_roles[index]
+			var prefix_rule := _grammar_rule(template, prefix_role)
+			if _role_available_for_completion(template, prefix_rule, counts, previous_role, previous_run, required_junctions, main_path_history):
+				role = prefix_role
+		else:
+			role = _choose_grammar_role(template, counts, previous_role, previous_run, main_interior - index, required_junctions, main_path_history, local_rng)
 		if role.is_empty():
 			# No usar un fallback que pueda saltarse una restricción física. Un
 			# template mal configurado debe producir un plan inválido, no una
@@ -150,6 +181,11 @@ func _build_grammar_plan(template: DungeonTemplateResource, generation_attempt :
 	plan.module_definition_variants[exit_id] = _find_module_variants(template, &"EXIT")
 	plan.main_path_nodes[exit_id] = true
 	plan.links[previous_id] = [exit_id]
+	if uses_distribution_rules:
+		plan.calculate_depths()
+		if not _apply_distribution_rules(template, plan, distribution_destination_budget, local_rng):
+			plan.generation_error = "No feasible parent/child distribution for configured branch rules"
+		return plan
 	# 6K.4A: el mismo DungeonPlan puede contener circuitos reales. Cada tramo
 	# RECONNECT enlaza dos JUNCTION del camino principal y crea una ruta
 	# alternativa; nunca se marca como branch terminal.
@@ -175,6 +211,10 @@ func _build_grammar_plan(template: DungeonTemplateResource, generation_attempt :
 		plan.links[reconnect_id] = [target]
 		reconnection_junctions[source] = true
 		reconnection_junctions[target] = true
+	# Las branch_rules ya añadieron todos los destinos declarados. No aplicar la
+	# expansión legacy por cada JUNCTION encima de una distribución explícita.
+	if uses_distribution_rules:
+		return plan
 	for junction_id in junction_ids:
 		# Los extremos de un circuito quedan reservados a circulación. Evita
 		# convertir la reconexión en un junction físico de cuatro salidas.
@@ -204,6 +244,228 @@ func _build_grammar_plan(template: DungeonTemplateResource, generation_attempt :
 		children.append(side_id)
 		plan.links[branch_parent] = children
 	return plan
+
+
+## Determina cuánto presupuesto total reserva el plan para destinos de
+## distribución. Los valores viven en Resources y el RNG local conserva la
+## reproducción por seed; los templates legacy nunca entran en esta ruta.
+func _choose_distribution_destination_budget(template: DungeonTemplateResource, total_modules: int, local_rng: RandomNumberGenerator) -> int:
+	var minimum := 0
+	var maximum := 0
+	for rule in template.branch_rules:
+		if rule == null:
+			continue
+		minimum += rule.min_total_children
+		maximum += maxi(rule.min_total_children, rule.max_total_children)
+	minimum = maxi(minimum, template.min_distribution_destinations)
+	if template.max_distribution_destinations >= 0:
+		maximum = mini(maximum, template.max_distribution_destinations)
+	var required_main := template.min_main_path_depth
+	for grammar_rule in template.grammar_rules:
+		if grammar_rule == null or grammar_rule.forbidden or not grammar_rule.main_path_allowed:
+			continue
+		if grammar_rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
+			continue
+		required_main = maxi(required_main, 0)
+		# La suma se evalúa abajo; esta asignación documenta que sólo roles de
+		# camino principal consumen el presupuesto secuencial.
+	var minimum_role_slots := 0
+	for grammar_rule in template.grammar_rules:
+		if grammar_rule == null or grammar_rule.forbidden or not grammar_rule.main_path_allowed:
+			continue
+		if grammar_rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
+			continue
+		minimum_role_slots += grammar_rule.min_count
+	required_main = maxi(required_main, minimum_role_slots)
+	var max_budget := total_modules - 2 - required_main
+	if template.max_main_path_depth >= 0:
+		max_budget = mini(max_budget, total_modules - 2 - template.max_main_path_depth)
+	maximum = mini(maximum, max_budget)
+	if maximum < minimum:
+		return -1
+	return local_rng.randi_range(minimum, maximum) if maximum > minimum else minimum
+
+
+func _minimum_junctions_for_main_capacity(template: DungeonTemplateResource, main_interior: int) -> int:
+	var non_junction_capacity := 0
+	var turn_capacity := 0
+	for rule in template.grammar_rules:
+		if rule == null or rule.forbidden or not rule.main_path_allowed or rule.role == &"JUNCTION":
+			continue
+		if rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
+			continue
+		var maximum := rule.max_count if rule.max_count >= 0 else main_interior
+		if rule.role in [&"TURN_LEFT", &"TURN_RIGHT"]:
+			turn_capacity += maximum
+		else:
+			non_junction_capacity += maximum
+	if template.max_turns >= 0:
+		turn_capacity = mini(turn_capacity, template.max_turns)
+	return maxi(0, main_interior - non_junction_capacity - turn_capacity)
+
+
+func _apply_distribution_rules(template: DungeonTemplateResource, plan: DungeonPlan, destination_budget: int, local_rng: RandomNumberGenerator) -> bool:
+	var remaining := destination_budget
+	var used_parents: Dictionary = {}
+	for rule_index in range(template.branch_rules.size()):
+		var rule: DungeonBranchRuleResource = template.branch_rules[rule_index]
+		if rule == null:
+			continue
+		var later_minimum := 0
+		var later_maximum := 0
+		for later_index in range(rule_index + 1, template.branch_rules.size()):
+			var later: DungeonBranchRuleResource = template.branch_rules[later_index]
+			if later != null:
+				later_minimum += later.min_total_children
+				later_maximum += maxi(later.min_total_children, later.max_total_children)
+		# La regla actual debe dejar como mínimo el presupuesto de los siguientes,
+		# pero también debe absorber lo suficiente para que sus máximos puedan
+		# completar el total. Evita que una elección local deje destinos huérfanos.
+		var minimum := maxi(rule.min_total_children, remaining - later_maximum)
+		var maximum := mini(maxi(minimum, rule.max_total_children), remaining - later_minimum)
+		if maximum < minimum:
+			return false
+		var child_total := local_rng.randi_range(minimum, maximum) if maximum > minimum else minimum
+		if not _apply_distribution_rule(template, plan, rule, child_total, used_parents, local_rng):
+			return false
+		remaining -= child_total
+	return remaining == 0
+
+
+func _apply_distribution_rule(template: DungeonTemplateResource, plan: DungeonPlan, rule: DungeonBranchRuleResource, child_total: int, used_parents: Dictionary, local_rng: RandomNumberGenerator) -> bool:
+	var candidates: Array[StringName] = []
+	for node_id in plan.module_ids:
+		if used_parents.has(node_id):
+			continue
+		if rule.require_main_path_parent and not plan.main_path_nodes.has(node_id):
+			continue
+		var depth := int(plan.node_depths.get(node_id, -1))
+		if depth < rule.min_parent_depth or (rule.max_parent_depth >= 0 and depth > rule.max_parent_depth):
+			continue
+		if not rule.parent_after_plan_tag.is_empty() and depth <= _tagged_parent_max_depth(plan, rule.parent_after_plan_tag):
+			continue
+		if not _distribution_parent_respects_clearance_neighborhood(plan, node_id, rule):
+			continue
+		var role: StringName = plan.module_types.get(node_id, &"")
+		if _matches_any_selector(template, role, plan.module_definitions.get(node_id, null), rule.parent_selectors):
+			candidates.append(node_id)
+	if candidates.is_empty():
+		return false
+	var viable_parent_counts: Array[int] = []
+	var parent_min := mini(rule.min_parent_count, rule.max_parent_count)
+	var parent_max := mini(maxi(rule.min_parent_count, rule.max_parent_count), candidates.size())
+	for parent_count in range(parent_min, parent_max + 1):
+		if parent_count <= 0:
+			continue
+		if child_total >= parent_count * rule.min_children_per_parent and child_total <= parent_count * rule.max_children_per_parent:
+			viable_parent_counts.append(parent_count)
+	if viable_parent_counts.is_empty():
+		return false
+	var parent_count := viable_parent_counts[local_rng.randi_range(0, viable_parent_counts.size() - 1)]
+	var parents := _select_distribution_parents(candidates, parent_count, rule.parent_selection, plan, local_rng)
+	if parents.size() != parent_count:
+		return false
+	var children_per_parent: Dictionary = {}
+	for parent in parents:
+		children_per_parent[parent] = rule.min_children_per_parent
+	var remaining_children := child_total - parent_count * rule.min_children_per_parent
+	while remaining_children > 0:
+		var expandable: Array[StringName] = []
+		for parent in parents:
+			if int(children_per_parent[parent]) < rule.max_children_per_parent:
+				expandable.append(parent)
+		if expandable.is_empty():
+			return false
+		var selected_parent := expandable[local_rng.randi_range(0, expandable.size() - 1)]
+		children_per_parent[selected_parent] = int(children_per_parent[selected_parent]) + 1
+		remaining_children -= 1
+	var rule_name := String(rule.stable_id) if not rule.stable_id.is_empty() else "RULE_%d" % template.branch_rules.find(rule)
+	for parent in parents:
+		used_parents[parent] = true
+		_apply_distribution_parent_variants(plan, parent, rule)
+		if not rule.parent_plan_tag.is_empty():
+			var tags: Array = plan.node_tags.get(parent, []).duplicate()
+			if not tags.has(rule.parent_plan_tag):
+				tags.append(rule.parent_plan_tag)
+			plan.node_tags[parent] = tags
+		for child_index in range(int(children_per_parent[parent])):
+			var child_id := StringName("BRANCH_%s_%s_%d" % [rule_name, parent, child_index])
+			plan.module_ids.append(child_id)
+			plan.module_types[child_id] = rule.destination_role
+			plan.module_definitions[child_id] = _find_module_definition(template, rule.destination_role)
+			plan.module_definition_variants[child_id] = _find_module_variants(template, rule.destination_role)
+			plan.branch_nodes[child_id] = true
+			var children: Array = plan.links.get(parent, []).duplicate()
+			children.append(child_id)
+			plan.links[parent] = children
+	return true
+
+
+## Compatibilidad declarativa de clearance para distribuidores. Un parent que
+## sostiene destinos laterales obligatorios necesita una franja de circulación
+## despejada antes y después de él; este chequeo cuenta TURN_* en un radio
+## lógico bilateral. No conoce orientación, arquetipos ni AABBs. Los templates
+## legacy usan 0/-1 y nunca restringen la selección.
+func _distribution_parent_respects_clearance_neighborhood(plan: DungeonPlan, parent_id: StringName, rule: DungeonBranchRuleResource) -> bool:
+	if rule.distribution_clearance_main_path_radius <= 0 or rule.max_turns_in_distribution_clearance < 0:
+		return true
+	var main_path: Array[StringName] = []
+	for node_id in plan.module_ids:
+		if plan.main_path_nodes.has(node_id):
+			main_path.append(node_id)
+	var parent_index := main_path.find(parent_id)
+	if parent_index < 0:
+		return true
+	var first := maxi(0, parent_index - rule.distribution_clearance_main_path_radius)
+	var last := mini(main_path.size() - 1, parent_index + rule.distribution_clearance_main_path_radius)
+	var turns := 0
+	for index in range(first, last + 1):
+		if plan.module_types.get(main_path[index], &"") in [&"TURN_LEFT", &"TURN_RIGHT"]:
+			turns += 1
+	return turns <= rule.max_turns_in_distribution_clearance
+
+
+func _tagged_parent_max_depth(plan: DungeonPlan, plan_tag: StringName) -> int:
+	var latest := -1
+	for node_id in plan.node_tags:
+		if (plan.node_tags[node_id] as Array).has(plan_tag):
+			latest = maxi(latest, int(plan.node_depths.get(node_id, -1)))
+	return latest
+
+
+func _select_distribution_parents(candidates: Array[StringName], count: int, mode: DungeonBranchRuleResource.ParentSelection, plan: DungeonPlan, local_rng: RandomNumberGenerator) -> Array[StringName]:
+	var ordered := candidates.duplicate()
+	if mode == DungeonBranchRuleResource.ParentSelection.EARLIEST or mode == DungeonBranchRuleResource.ParentSelection.LATEST:
+		ordered.sort_custom(func(a: StringName, b: StringName) -> bool:
+			var depth_a := int(plan.node_depths.get(a, 0))
+			var depth_b := int(plan.node_depths.get(b, 0))
+			if depth_a == depth_b:
+				return String(a) < String(b) if mode == DungeonBranchRuleResource.ParentSelection.EARLIEST else String(a) > String(b)
+			return depth_a < depth_b if mode == DungeonBranchRuleResource.ParentSelection.EARLIEST else depth_a > depth_b
+		)
+		return ordered.slice(0, count)
+	var selected: Array[StringName] = []
+	while not ordered.is_empty() and selected.size() < count:
+		selected.append(ordered.pop_at(local_rng.randi_range(0, ordered.size() - 1)))
+	return selected
+
+
+func _apply_distribution_parent_variants(plan: DungeonPlan, node_id: StringName, rule: DungeonBranchRuleResource) -> void:
+	if rule.parent_module_variants.is_empty():
+		return
+	var variants: Array[ModuleDefinitionResource] = []
+	for definition in rule.parent_module_variants:
+		if definition != null and not variants.has(definition):
+			variants.append(definition)
+	if not rule.parent_variant_required:
+		for existing in plan.module_definition_variants.get(node_id, []):
+			if existing != null and not variants.has(existing):
+				variants.append(existing)
+	if variants.is_empty():
+		return
+	plan.module_definition_variants[node_id] = variants
+	if rule.parent_variant_required:
+		plan.module_definitions[node_id] = variants[0]
 
 
 func _choose_reconnection_pairs(template: DungeonTemplateResource, junction_ids: Array[StringName], plan: DungeonPlan, local_rng: RandomNumberGenerator) -> Array[Dictionary]:
@@ -241,7 +503,11 @@ func _choose_grammar_role(template: DungeonTemplateResource, counts: Dictionary,
 	for rule in template.grammar_rules:
 		if rule == null or rule.forbidden or rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
 			continue
+		if not rule.main_path_allowed:
+			continue
 		if main_path_history.size() < rule.min_depth_from_start:
+			continue
+		if rule.max_depth_from_start >= 0 and main_path_history.size() > rule.max_depth_from_start:
 			continue
 		var count := int(counts.get(rule.role, 0))
 		var max_count := rule.max_count if rule.max_count >= 0 else 9999
@@ -256,6 +522,8 @@ func _choose_grammar_role(template: DungeonTemplateResource, counts: Dictionary,
 		if rule.role == previous_role and rule.max_consecutive >= 0 and previous_run >= rule.max_consecutive:
 			continue
 		if not _reconnection_junction_spacing_allowed(template, main_path_history, rule.role):
+			continue
+		if not _main_path_distribution_clearance_allowed(template, main_path_history, rule.role):
 			continue
 		if not _is_grammar_transition_allowed(template, main_path_history, rule.role):
 			continue
@@ -328,7 +596,11 @@ func _has_feasible_role_completion(template: DungeonTemplateResource, counts: Di
 func _role_available_for_completion(template: DungeonTemplateResource, rule: DungeonGrammarRuleResource, counts: Dictionary, previous_role: StringName, previous_run: int, required_junctions: int, history: Array[StringName]) -> bool:
 	if rule == null or rule.forbidden or rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
 		return false
+	if not rule.main_path_allowed:
+		return false
 	if history.size() < rule.min_depth_from_start:
+		return false
+	if rule.max_depth_from_start >= 0 and history.size() > rule.max_depth_from_start:
 		return false
 	var count := int(counts.get(rule.role, 0))
 	var max_count := rule.max_count if rule.max_count >= 0 else 9999
@@ -344,7 +616,78 @@ func _role_available_for_completion(template: DungeonTemplateResource, rule: Dun
 		return false
 	if not _reconnection_junction_spacing_allowed(template, history, rule.role):
 		return false
+	if not _main_path_distribution_clearance_allowed(template, history, rule.role):
+		return false
 	return _is_grammar_transition_allowed(template, history, rule.role)
+
+
+## Durante la construcción de la espina aplica la misma aproximación bilateral
+## a todos los parents distribuidores posibles. Es conservadora a propósito:
+## una regla SEEDED o dependiente de tags podría elegir cualquiera de esos
+## parents después; validar todos evita aceptar una espina que luego no pueda
+## hospedar sus destinos. La configuración sigue siendo enteramente del Resource.
+func _main_path_distribution_clearance_allowed(template: DungeonTemplateResource, history: Array[StringName], candidate_role: StringName) -> bool:
+	var future: Array[StringName] = history.duplicate()
+	future.append(candidate_role)
+	for branch_rule in template.branch_rules:
+		if branch_rule == null or branch_rule.distribution_clearance_main_path_radius <= 0 or branch_rule.max_turns_in_distribution_clearance < 0:
+			continue
+		if not branch_rule.require_main_path_parent:
+			continue
+		for parent_index in _predicted_distribution_parent_indices(template, branch_rule, future):
+			var first := maxi(0, parent_index - branch_rule.distribution_clearance_main_path_radius)
+			var last := mini(future.size() - 1, parent_index + branch_rule.distribution_clearance_main_path_radius)
+			var turns := 0
+			for index in range(first, last + 1):
+				if future[index] in [&"TURN_LEFT", &"TURN_RIGHT"]:
+					turns += 1
+			if turns > branch_rule.max_turns_in_distribution_clearance:
+				return false
+	return true
+
+
+## Devuelve sólo los parents que la selección declarada todavía podría elegir.
+## Para EARLIEST/LATEST no penaliza cada corredor compatible de la espina: la
+## restricción se aplica a la porción que el propio Resource puede seleccionar.
+## SEEDED conserva una comprobación conservadora porque cualquiera puede salir
+## elegido por su RNG. Las dependencias por tag se resuelven contra la regla que
+## emite ese tag cuando es predecible desde la misma historia de roles.
+func _predicted_distribution_parent_indices(template: DungeonTemplateResource, rule: DungeonBranchRuleResource, history: Array[StringName]) -> Array[int]:
+	var eligible: Array[int] = []
+	for index in range(history.size()):
+		if index < rule.min_parent_depth or (rule.max_parent_depth >= 0 and index > rule.max_parent_depth):
+			continue
+		var role: StringName = history[index]
+		if _matches_any_selector(template, role, _find_module_definition(template, role), rule.parent_selectors):
+			eligible.append(index)
+	if not rule.parent_after_plan_tag.is_empty():
+		var tagged_depth := _predicted_plan_tag_depth(template, rule.parent_after_plan_tag, history)
+		if tagged_depth >= 0:
+			eligible = eligible.filter(func(index: int) -> bool: return index > tagged_depth)
+		else:
+			return []
+	if rule.parent_selection == DungeonBranchRuleResource.ParentSelection.SEEDED:
+		return eligible
+	var maximum := mini(maxi(1, rule.max_parent_count), eligible.size())
+	if rule.parent_selection == DungeonBranchRuleResource.ParentSelection.EARLIEST:
+		return eligible.slice(0, maximum)
+	var first := maxi(0, eligible.size() - maximum)
+	return eligible.slice(first, eligible.size())
+
+
+func _predicted_plan_tag_depth(template: DungeonTemplateResource, plan_tag: StringName, history: Array[StringName]) -> int:
+	for candidate_rule in template.branch_rules:
+		if candidate_rule == null or candidate_rule.parent_plan_tag != plan_tag:
+			continue
+		# Una dependencia encadenada no puede deducirse sin simular la fase de
+		# distribución completa; se deja al validador exacto posterior.
+		if not candidate_rule.parent_after_plan_tag.is_empty():
+			return -1
+		var parents := _predicted_distribution_parent_indices(template, candidate_rule, history)
+		if parents.is_empty():
+			return -1
+		return parents.back()
+	return -1
 
 
 ## Si un template exige circuitos, los JUNCTION que los originan no pueden
@@ -363,7 +706,7 @@ func _reconnection_junction_spacing_allowed(template: DungeonTemplateResource, h
 func _minimums_missing(template: DungeonTemplateResource, counts: Dictionary, required_junctions: int) -> int:
 	var missing := 0
 	for rule in template.grammar_rules:
-		if rule == null or rule.forbidden or rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
+		if rule == null or rule.forbidden or not rule.main_path_allowed or rule.role in [&"START", &"EXIT", &"SIDE_ROOM"]:
 			continue
 		var needed := required_junctions if rule.role == &"JUNCTION" else rule.min_count
 		missing += maxi(0, needed - int(counts.get(rule.role, 0)))

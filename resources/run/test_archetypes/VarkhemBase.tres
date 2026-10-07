@@ -13,22 +13,22 @@ script = ExtResource("4")
 size_id = &"SMALL"
 min_modules = 13
 max_modules = 13
-role_min_counts = {"CORRIDOR": 2, "ROOM": 3, "JUNCTION": 2}
-role_max_counts = {"CORRIDOR": 4, "ROOM": 4, "JUNCTION": 2}
+role_min_counts = {"CORRIDOR": 2, "ROOM": 0, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 6, "ROOM": 0, "JUNCTION": 2}
 [sub_resource type="Resource" id="Medium"]
 script = ExtResource("4")
 size_id = &"MEDIUM"
 min_modules = 17
 max_modules = 17
-role_min_counts = {"CORRIDOR": 2, "ROOM": 4, "JUNCTION": 2}
-role_max_counts = {"CORRIDOR": 5, "ROOM": 6, "JUNCTION": 3}
+role_min_counts = {"CORRIDOR": 2, "ROOM": 0, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 8, "ROOM": 0, "JUNCTION": 4}
 [sub_resource type="Resource" id="Large"]
 script = ExtResource("4")
 size_id = &"LARGE"
 min_modules = 21
 max_modules = 21
-role_min_counts = {"CORRIDOR": 2, "ROOM": 5, "JUNCTION": 2}
-role_max_counts = {"CORRIDOR": 6, "ROOM": 7, "JUNCTION": 4}
+role_min_counts = {"CORRIDOR": 2, "ROOM": 0, "JUNCTION": 2}
+role_max_counts = {"CORRIDOR": 10, "ROOM": 0, "JUNCTION": 4}
 
 [sub_resource type="Resource" id="CentralHubPhysical"]
 script = ExtResource("7")
@@ -175,6 +175,7 @@ future_gameplay_tags = [&"HIGH_POPULATION_FUTURE"]
 physical_module_variants = [SubResource("CentralHubPhysical")]
 physical_variant_required = true
 preferred_connection_count = 3
+required_plan_tags = [&"HUB_DISTRIBUTION"]
 [sub_resource type="Resource" id="Command"]
 script = ExtResource("5")
 semantic_id = &"COMMAND_ROOM"
@@ -186,6 +187,9 @@ mandatory = true
 min_count = 1
 min_depth_from_start = 4
 prefer_far_from_start = true
+assignment_priority = 100
+main_path_preference = 2
+branch_preference = 1
 future_gameplay_tags = [&"BOSS_ENCOUNTER_FUTURE", &"DUNGEON_OBJECTIVE"]
 physical_module_variants = [SubResource("CommandPhysical")]
 physical_variant_required = true

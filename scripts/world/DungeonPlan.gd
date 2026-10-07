@@ -9,6 +9,10 @@ var module_types: Dictionary = {}
 # Datos consultables por placement futuro: no se infieren desde la geometría.
 var main_path_nodes: Dictionary = {}
 var branch_nodes: Dictionary = {}
+## Tags estructurales declarados por DungeonBranchRuleResource. Permiten que
+## una semántica de tránsito se reserve sobre el distribuidor que la gramática
+## creó, sin acoplar SemanticLocationDirector a un archetype concreto.
+var node_tags: Dictionary = {}
 # Tramos de circulación que vuelven a conectar dos nodos existentes. No son
 # ramas terminales: conservan el mismo DungeonPlan como fuente de verdad.
 var reconnection_nodes: Dictionary = {}
@@ -40,6 +44,7 @@ func duplicate_for_assembly_probe() -> DungeonPlan:
 	copy.module_types = module_types.duplicate()
 	copy.main_path_nodes = main_path_nodes.duplicate()
 	copy.branch_nodes = branch_nodes.duplicate()
+	copy.node_tags = node_tags.duplicate(true)
 	copy.reconnection_nodes = reconnection_nodes.duplicate()
 	copy.reconnections = reconnections.duplicate(true)
 	copy.module_definitions = module_definitions.duplicate()
