@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/run/ContentSlotDefinitionResource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+stable_id = &"varkhem_encounter_room"
+category = &"ENCOUNTER"
+local_position = Vector3(0, 0.9, 0)
+tags = [&"VARKHEM", &"COMBAT", &"ROOM"]
+connector_clearance_m = 1.2
