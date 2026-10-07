@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1")
-species_id = "xenomorfo"
-species_display_name = "Xenomorfo"
+species_id = "horvex"
+species_display_name = "Horvex"
 units_per_level = 1
 weapon_damage_per_level = 0
 shield_block_per_level = 2

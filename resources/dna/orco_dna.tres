@@ -6,8 +6,8 @@
 
 [resource]
 script = ExtResource("1")
-species_id = "orco"
-species_display_name = "Orco"
+species_id = "varkhen"
+species_display_name = "Varkhen"
 units_per_level = 1
 weapon_damage_per_level = 2
 weapon_level_3_card = ExtResource("2")

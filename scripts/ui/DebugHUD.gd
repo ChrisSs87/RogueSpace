@@ -95,9 +95,9 @@ func _on_add_orco_pressed() -> void:
 		prototype.toggle_content_profile_from_debug()
 		_refresh()
 		return
-	DNAManager.add_dna("weapon", "orco", 1)
-	DNAManager.add_dna("shield", "orco", 1)
-	DNAManager.add_dna("suit", "orco", 1)
+	DNAManager.add_dna("weapon", "varkhen", 1)
+	DNAManager.add_dna("shield", "varkhen", 1)
+	DNAManager.add_dna("suit", "varkhen", 1)
 
 
 func _on_add_xeno_pressed() -> void:
@@ -106,9 +106,9 @@ func _on_add_xeno_pressed() -> void:
 		prototype.advance_sector_from_debug()
 		_refresh()
 		return
-	DNAManager.add_dna("weapon", "xenomorfo", 1)
-	DNAManager.add_dna("shield", "xenomorfo", 1)
-	DNAManager.add_dna("suit", "xenomorfo", 1)
+	DNAManager.add_dna("weapon", "horvex", 1)
+	DNAManager.add_dna("shield", "horvex", 1)
+	DNAManager.add_dna("suit", "horvex", 1)
 
 
 func _on_reset_pressed() -> void:
@@ -168,8 +168,8 @@ func _refresh() -> void:
 	text += "MOVE TIME S/W/R: %.1f / %.1f / %.1f s\n" % [float(RunState.movement_time_sec["STEALTH"]), float(RunState.movement_time_sec["WALK"]), float(RunState.movement_time_sec["RUN"])]
 	text += "Equipo: %s / %s / %s\n" % [weapon_name, shield_name, suit_name]
 	text += "\nADN (cantidad / nivel):\n"
-	for species_id in ["orco", "xenomorfo"]:
-		var display_species := "Varkhen" if species_id == "orco" else "Horvex"
+	for species_id in ["varkhen", "horvex"]:
+		var display_species := "Varkhen" if species_id == "varkhen" else "Horvex"
 		text += "%s — Espada %d/%d · Escudo %d/%d · Traje %d/%d\n" % [
 			display_species,
 			DNAManager.get_dna_amount("weapon", species_id), DNAManager.get_dna_level("weapon", species_id),

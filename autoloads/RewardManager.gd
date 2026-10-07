@@ -293,8 +293,8 @@ func _slot_label(equipment_slot: String) -> String:
 
 func _species_label(species_id: String) -> String:
 	match species_id:
-		"orco":
+		"varkhen":
 			return "ADN Varkhen"
-		"xenomorfo":
+		"horvex":
 			return "ADN Horvex"
 	return "ADN"
