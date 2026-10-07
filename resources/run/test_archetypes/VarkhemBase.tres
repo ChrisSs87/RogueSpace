@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=33 format=3]
+[gd_resource type="Resource" load_steps=34 format=3]
 [ext_resource type="Script" path="res://resources/run/DungeonArchetypeResource.gd" id="1"]
 [ext_resource type="Script" path="res://resources/run/DungeonSectorDefinitionResource.gd" id="2"]
 [ext_resource type="Script" path="res://resources/run/DungeonSectorPathResource.gd" id="3"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://resources/run/SemanticLocationResource.gd" id="5"]
 [ext_resource type="Resource" path="res://resources/run/test_templates/TestVarkhemBaseSemantic.tres" id="6"]
 [ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="7"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_encounter_room.tres" id="8"]
 
 [sub_resource type="Resource" id="Small"]
 script = ExtResource("4")
@@ -46,6 +47,7 @@ tags = [&"BARRACKS", &"DESTINATION"]
 footprint_size = Vector2(14, 10)
 placement_priority = 80
 connector_sides = [&"west", &"east"]
+content_slots = [ExtResource("8")]
 [sub_resource type="Resource" id="PrivatePhysical"]
 script = ExtResource("7")
 stable_id = &"base_varkhem_private_room"
@@ -54,6 +56,7 @@ tags = [&"PRIVATE", &"LOW_VALUE_DESTINATION"]
 footprint_size = Vector2(6, 6)
 placement_priority = 80
 connector_sides = [&"west", &"east"]
+content_slots = [ExtResource("8")]
 [sub_resource type="Resource" id="ArmoryPhysical"]
 script = ExtResource("7")
 stable_id = &"base_armory"
@@ -62,6 +65,7 @@ tags = [&"ARMORY", &"HIGH_VALUE_OPTIONAL"]
 footprint_size = Vector2(10, 10)
 placement_priority = 80
 connector_sides = [&"west", &"east"]
+content_slots = [ExtResource("8")]
 [sub_resource type="Resource" id="FoodPhysical"]
 script = ExtResource("7")
 stable_id = &"base_food_storage"
@@ -70,6 +74,7 @@ tags = [&"FOOD_STORAGE", &"DESTINATION"]
 footprint_size = Vector2(10, 8)
 placement_priority = 80
 connector_sides = [&"west", &"east"]
+content_slots = [ExtResource("8")]
 [sub_resource type="Resource" id="PrisonPhysical"]
 script = ExtResource("7")
 stable_id = &"base_prison"
@@ -78,6 +83,7 @@ tags = [&"PRISON", &"DESTINATION"]
 footprint_size = Vector2(12, 10)
 placement_priority = 80
 connector_sides = [&"west", &"east"]
+content_slots = [ExtResource("8")]
 [sub_resource type="Resource" id="CommandPhysical"]
 script = ExtResource("7")
 stable_id = &"base_command_room"
@@ -86,6 +92,7 @@ tags = [&"COMMAND", &"BOSS_ENCOUNTER_FUTURE", &"DESTINATION"]
 footprint_size = Vector2(14, 12)
 placement_priority = 90
 connector_sides = [&"west", &"east"]
+content_slots = [ExtResource("8")]
 
 [sub_resource type="Resource" id="Access"]
 script = ExtResource("5")
