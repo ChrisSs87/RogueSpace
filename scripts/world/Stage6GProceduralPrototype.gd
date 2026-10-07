@@ -7,6 +7,7 @@ const LAYER := 32
 const DIRECTOR := preload("res://scripts/world/RunDirector.gd")
 const ARCHETYPE_DIRECTOR := preload("res://scripts/world/DungeonArchetypeDirector.gd")
 const CONTENT_DIRECTOR := preload("res://scripts/world/ContentPlacementDirector.gd")
+const CONTENT_RUNTIME_CONSUMER := preload("res://scripts/world/ContentPlacementRuntimeConsumer.gd")
 const TEMPLATE := preload("res://resources/run/DungeonTemplateResource.gd")
 const TEST_TEMPLATE_A := preload("res://resources/run/test_templates/TestCorridorHeavy.tres")
 const TEST_TEMPLATE_B := preload("res://resources/run/test_templates/TestRoomBranchHeavy.tres")
@@ -39,6 +40,8 @@ var start_point := Vector3(0, 0.9, 0)
 var exit_point := Vector3(0, 0.9, 0)
 var current_plan: DungeonPlan
 var current_content_plan: ContentPlacementPlan
+var current_content_profile: ContentPlacementProfileResource
+var current_runtime_content_report: Dictionary = {}
 var assembly_error := ""
 var _assembly_signature := ""
 var _topology_signature := ""
@@ -120,7 +123,7 @@ func get_active_template_id() -> StringName:
 
 
 func get_active_content_profile_id() -> StringName:
-	var profile: ContentPlacementProfileResource = TEST_CONTENT_PROFILE_A if test_content_profile_index == 0 else TEST_CONTENT_PROFILE_B
+	var profile := _active_content_profile()
 	return profile.stable_id
 
 
@@ -223,6 +226,8 @@ func _regenerate_current_sector() -> void:
 	await _bake(root)
 	nav_ready = await _await_navigation_ready()
 	nav_sync_state = "OK" if nav_ready else "FAIL"
+	if nav_ready:
+		_validate_runtime_content_navigation()
 	_reposition_player()
 	_update_debug()
 	print("6G ASSEMBLY seed=%d sector_retry=%d effective_sector_seed=%d modules=%d proxies=%d vertices=%d polygons=%d valid=%s nav=%s ms=%d signature=%s" % [seed, sector_retry_index, sector_effective_seed, module_count, proxies, nav_mesh.vertices.size() if nav_mesh != null else 0, nav_mesh.get_polygon_count() if nav_mesh != null else 0, assembly_valid, nav_ready, Time.get_ticks_msec() - started, _assembly_signature])
@@ -1115,7 +1120,7 @@ func _has_connected_path() -> bool:
 
 
 func _clear_previous_assembly() -> void:
-	for name in [&"AssembledModules", &"NavigationBakeProxies", &"BakedNavigationRegion", &"ContentSlotDebug", &"SectorTransitionDebug", &"SemanticLocationDebug"]:
+	for name in [&"AssembledModules", &"NavigationBakeProxies", &"BakedNavigationRegion", &"ContentSlotDebug", &"RuntimeContent", &"SectorTransitionDebug", &"SemanticLocationDebug"]:
 		var old := get_node_or_null(NodePath(name))
 		if old != null:
 			if old == nav_region:
@@ -1128,6 +1133,8 @@ func _clear_previous_assembly() -> void:
 	bake_source_bounds = AABB()
 	bake_proxy_reports.clear()
 	current_content_plan = null
+	current_content_profile = null
+	current_runtime_content_report.clear()
 	module_count = 0
 	nav_mesh = null
 	nav_region = null
@@ -1242,9 +1249,14 @@ func _rebuild_content_placement() -> void:
 	var old := get_node_or_null("ContentSlotDebug")
 	if old != null:
 		old.free()
+	var old_runtime := get_node_or_null("RuntimeContent")
+	if old_runtime != null:
+		old_runtime.free()
+	current_runtime_content_report.clear()
 	if current_plan == null or not assembly_valid:
 		return
-	var profile: ContentPlacementProfileResource = TEST_CONTENT_PROFILE_A if test_content_profile_index == 0 else TEST_CONTENT_PROFILE_B
+	var profile := _active_content_profile()
+	current_content_profile = profile
 	current_content_plan = CONTENT_DIRECTOR.build(current_plan, profile, seed)
 	if not current_content_plan.is_valid():
 		push_error("6I content placement failed: %s" % current_content_plan.generation_error)
@@ -1270,6 +1282,45 @@ func _rebuild_content_placement() -> void:
 		marker.set_meta("content_slot_id", slot.unique_id)
 		marker.set_meta("category", slot.category)
 		root.add_child(marker)
+	_rebuild_runtime_content(profile)
+
+
+func _active_content_profile() -> ContentPlacementProfileResource:
+	if active_template != null and active_template.content_placement_profile != null:
+		return active_template.content_placement_profile
+	return TEST_CONTENT_PROFILE_A if test_content_profile_index == 0 else TEST_CONTENT_PROFILE_B
+
+
+func _rebuild_runtime_content(profile: ContentPlacementProfileResource) -> void:
+	if current_content_plan == null or profile == null:
+		return
+	var root := Node3D.new()
+	root.name = "RuntimeContent"
+	add_child(root)
+	current_runtime_content_report = CONTENT_RUNTIME_CONSUMER.consume(current_content_plan, profile, root)
+
+
+func _validate_runtime_content_navigation() -> void:
+	var root := get_node_or_null("RuntimeContent") as Node3D
+	if root == null or nav_region == null:
+		return
+	var map := nav_region.get_navigation_map()
+	var start := NavigationServer3D.map_get_closest_point(map, start_point)
+	var rejected: Array[String] = []
+	for child in root.get_children():
+		if not child is Enemy:
+			continue
+		var target := NavigationServer3D.map_get_closest_point(map, (child as Node3D).global_position)
+		var path := NavigationServer3D.map_get_path(map, start, target, true)
+		if path.size() <= 1:
+			rejected.append(String(child.get_meta("content_slot_id", &"")))
+			child.queue_free()
+	if not rejected.is_empty():
+		current_runtime_content_report["navigation_rejected"] = rejected
+
+
+func get_runtime_content_metrics() -> Dictionary:
+	return current_runtime_content_report.duplicate(true)
 
 
 func _content_slot_is_safe(slot: DungeonContentSlot, modules: Node3D) -> bool:
