@@ -1120,6 +1120,7 @@ func _has_connected_path() -> bool:
 
 
 func _clear_previous_assembly() -> void:
+	_clear_runtime_combat_before_regeneration()
 	for name in [&"AssembledModules", &"NavigationBakeProxies", &"BakedNavigationRegion", &"ContentSlotDebug", &"RuntimeContent", &"SectorTransitionDebug", &"SemanticLocationDebug"]:
 		var old := get_node_or_null(NodePath(name))
 		if old != null:
@@ -1142,6 +1143,20 @@ func _clear_previous_assembly() -> void:
 	# que la nueva región coexista un tick con la anterior durante un reset.
 	await get_tree().process_frame
 	await get_tree().physics_frame
+
+
+## RuntimeContent pertenece a este prototipo. Antes de liberarlo, corta un
+## encounter/combat que todavía pueda referenciar sus Enemy y devuelve al
+## Player a exploración. Los managers conservan ownership entre regeneraciones
+## porque son autoloads; no pueden sobrevivir a sus participantes físicos.
+func _clear_runtime_combat_before_regeneration() -> void:
+	if get_node_or_null("RuntimeContent") == null:
+		return
+	CombatEncounterManager.reset()
+	CombatManager.reset_after_defeat()
+	var player := get_tree().get_first_node_in_group("player") as Node3D
+	if player != null and player.has_method("unfreeze_after_combat"):
+		player.unfreeze_after_combat()
 
 
 func _reposition_player() -> void:
