@@ -62,6 +62,9 @@ class_name DungeonTemplateResource
 
 ## Metadata de contenido futuro: 6H no la resuelve ni la pasa al assembler.
 @export var content_profile_id: StringName
+## Perfil de placement opcional para un template runtime. La ausencia conserva
+## los perfiles de debug seleccionados por Stage6G y no crea contenido real.
+@export var content_placement_profile: ContentPlacementProfileResource
 @export var loot_profile_id: StringName
 @export var event_profile_id: StringName
 @export var environmental_profile_id: StringName
