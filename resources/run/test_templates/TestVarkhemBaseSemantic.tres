@@ -30,7 +30,7 @@ supports_branch = true
 [sub_resource type="Resource" id="Resource_7h7ah"]
 script = ExtResource("2_q1mxn")
 role = &"CORRIDOR"
-min_count = 2
+min_count = 3
 max_count = 6
 selection_weight = 2.0
 max_consecutive = 2

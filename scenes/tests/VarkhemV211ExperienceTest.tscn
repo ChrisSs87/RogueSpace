@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+[ext_resource type="PackedScene" path="res://scenes/tests/Stage6JArchetypePrototype.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/tests/ProceduralInspection.gd" id="2"]
+[node name="VarkhemV211ExperienceTest" instance=ExtResource("1")]
+initial_seed = 65001
+test_archetype_index = 1
+[node name="Inspection" type="CanvasLayer" parent="."]
+script = ExtResource("2")

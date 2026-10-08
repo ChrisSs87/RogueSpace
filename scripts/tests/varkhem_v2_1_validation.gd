@@ -15,7 +15,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--from="): first = int(arg.trim_prefix("--from="))
 		if arg.begins_with("--to="): last = int(arg.trim_prefix("--to="))
-	var dungeon := STAGE.new()
+	var dungeon = _new_dungeon()
 	dungeon.archetype_mode = true
 	dungeon.test_archetype_index = 1
 	dungeon.initial_seed = first
@@ -94,8 +94,10 @@ func _ready() -> void:
 			if content == null or not content.is_valid() or runtime == null or runtime.get_child_count() != content.selected_slots.size(): errors.append("runtime encounter mismatch")
 			if row.runtime.has("navigation_rejected") or not row.runtime.invalid_payloads.is_empty(): errors.append("runtime invalid spawn")
 			if overlaps > 0: errors.append("accepted overlaps")
+			errors.append_array(_additional_physical_errors(dungeon))
 			row["overlaps"] = overlaps
 			row["errors"] = errors
+			row.merge(_additional_physical_metrics(dungeon))
 			print("V21_PHYSICAL=%s" % JSON.stringify(row))
 			sectors += 1
 			if not errors.is_empty():
@@ -121,8 +123,8 @@ func _logical() -> void:
 	var sectors := 0
 	for seed in range(65001,65101):
 		var director := DungeonArchetypeDirector.new()
-		var run := director.create_sector_run(ARCHETYPE,seed)
-		var replay := director.create_sector_run(ARCHETYPE,seed)
+		var run := director.create_sector_run(_test_archetype(),seed)
+		var replay := director.create_sector_run(_test_archetype(),seed)
 		var commands := 0
 		for index in run.sector_count():
 			var plan := director.build_sector_plan(run,index)
@@ -171,6 +173,22 @@ func _meters(path: PackedVector3Array) -> float:
 	var result := 0.0
 	for index in range(1,path.size()): result += path[index-1].distance_to(path[index])
 	return result
+
+
+func _new_dungeon() -> Node3D:
+	return STAGE.new()
+
+
+func _test_archetype() -> DungeonArchetypeResource:
+	return ARCHETYPE
+
+
+func _additional_physical_metrics(_dungeon: Node3D) -> Dictionary:
+	return {}
+
+
+func _additional_physical_errors(_dungeon: Node3D) -> Array:
+	return []
 
 
 func _mobile_smoke() -> void:

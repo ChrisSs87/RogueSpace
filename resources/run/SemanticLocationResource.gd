@@ -33,6 +33,10 @@ enum Preference { ALLOWED, PREFERRED, PROHIBITED }
 ## declaradas arriba. El assembler no puede degradarla silenciosamente al
 ## kit genérico del mismo ROLE si la colocación física falla.
 @export var physical_variant_required := false
+## Optional visual-only identity, attached after real assembly (never probes).
+## Scene must not contain physics, navigation, gameplay scripts or CSG geometry.
+## Null keeps all existing archetypes unchanged.
+@export var visual_presentation: PackedScene
 ## Preferencia blanda para nodos de circulación con más conexiones reales.
 ## Cero conserva el contrato anterior; no invalida topologías pequeñas.
 @export_range(0, 8) var preferred_connection_count := 0

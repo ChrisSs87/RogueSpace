@@ -208,6 +208,7 @@ func _regenerate_current_sector() -> void:
 	_seam_results = assembly.seams
 	_build_transition_slot()
 	_rebuild_semantic_location_debug(root)
+	_attach_semantic_presentations(root)
 	_rebuild_content_placement()
 	_update_debug()
 	await get_tree().physics_frame
@@ -231,6 +232,25 @@ func _regenerate_current_sector() -> void:
 	_reposition_player()
 	_update_debug()
 	print("6G ASSEMBLY seed=%d sector_retry=%d effective_sector_seed=%d modules=%d proxies=%d vertices=%d polygons=%d valid=%s nav=%s ms=%d signature=%s" % [seed, sector_retry_index, sector_effective_seed, module_count, proxies, nav_mesh.vertices.size() if nav_mesh != null else 0, nav_mesh.get_polygon_count() if nav_mesh != null else 0, assembly_valid, nav_ready, Time.get_ticks_msec() - started, _assembly_signature])
+
+
+func _attach_semantic_presentations(root: Node3D) -> void:
+	for location in current_plan.semantic_locations:
+		var scene: PackedScene = location.definition.visual_presentation
+		var module := root.get_node_or_null(NodePath(String(location.node_id)))
+		if scene != null and module != null and not module.has_node("SemanticPresentation"):
+			var presentation := scene.instantiate()
+			presentation.name = "SemanticPresentation"
+			# Optional entry trim follows actual consumed connectors, never a sealed
+			# catalogue opening. Purely visual: no connector or collision mutation.
+			for detail in presentation.get_children():
+				if not detail is Node3D or not detail.has_meta("connector_side"):
+					continue
+				detail.visible = false
+				for connector in module.get_children():
+					if connector is Marker3D and connector.get_meta("side", &"") == detail.get_meta("connector_side") and not connector.get_meta("sealed_unused", false):
+						detail.visible = true
+			module.add_child(presentation)
 
 
 func _build_seeded_plan(run_seed: int) -> DungeonPlan:

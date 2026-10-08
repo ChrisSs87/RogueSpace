@@ -1,0 +1,82 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Gold"]
+shading_mode = 0
+albedo_color = Color(1, 0.68, 0.14, 1)
+[sub_resource type="StandardMaterial3D" id="Navy"]
+shading_mode = 0
+albedo_color = Color(0.04, 0.08, 0.13, 1)
+[sub_resource type="StandardMaterial3D" id="Screen"]
+shading_mode = 0
+albedo_color = Color(0.12, 0.7, 0.75, 1)
+[sub_resource type="BoxMesh" id="EntryStripe"]
+material = SubResource("Gold")
+size = Vector3(0.05, 1.7, 0.08)
+[sub_resource type="BoxMesh" id="Panel"]
+material = SubResource("Navy")
+size = Vector3(8, 1.15, 0.04)
+[sub_resource type="BoxMesh" id="Display"]
+material = SubResource("Screen")
+size = Vector3(2, 0.6, 0.02)
+[sub_resource type="PlaneMesh" id="FloorMark"]
+material = SubResource("Gold")
+size = Vector2(3, 1.4)
+[sub_resource type="BoxMesh" id="Lintel"]
+material = SubResource("Gold")
+size = Vector3(0.05, 0.09, 2.7)
+
+[node name="CommandPresentation" type="Node3D"]
+
+[node name="WestStripeA" type="MeshInstance3D" parent="."]
+metadata/connector_side = &"west"
+position = Vector3(-6.82, 0.85, -1.32)
+mesh = SubResource("EntryStripe")
+[node name="WestStripeB" type="MeshInstance3D" parent="."]
+metadata/connector_side = &"west"
+position = Vector3(-6.82, 0.85, 1.32)
+mesh = SubResource("EntryStripe")
+[node name="EastStripeA" type="MeshInstance3D" parent="."]
+metadata/connector_side = &"east"
+position = Vector3(6.82, 0.85, -1.32)
+mesh = SubResource("EntryStripe")
+[node name="EastStripeB" type="MeshInstance3D" parent="."]
+metadata/connector_side = &"east"
+position = Vector3(6.82, 0.85, 1.32)
+mesh = SubResource("EntryStripe")
+[node name="WestLintel" type="MeshInstance3D" parent="."]
+metadata/connector_side = &"west"
+position = Vector3(-6.82, 1.92, 0)
+mesh = SubResource("Lintel")
+[node name="EastLintel" type="MeshInstance3D" parent="."]
+metadata/connector_side = &"east"
+position = Vector3(6.82, 1.92, 0)
+mesh = SubResource("Lintel")
+[node name="NorthPanel" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.15, -5.8)
+mesh = SubResource("Panel")
+[node name="SouthPanel" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.15, 5.8)
+mesh = SubResource("Panel")
+[node name="NorthScreenA" type="MeshInstance3D" parent="."]
+position = Vector3(-2, 1.15, -5.76)
+mesh = SubResource("Display")
+[node name="NorthScreenB" type="MeshInstance3D" parent="."]
+position = Vector3(2, 1.15, -5.76)
+mesh = SubResource("Display")
+[node name="SouthScreenA" type="MeshInstance3D" parent="."]
+position = Vector3(-2, 1.15, 5.76)
+mesh = SubResource("Display")
+[node name="SouthScreenB" type="MeshInstance3D" parent="."]
+position = Vector3(2, 1.15, 5.76)
+mesh = SubResource("Display")
+[node name="TacticalFloorMark" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.025, 0)
+mesh = SubResource("FloorMark")
+[node name="CommandLabel" type="Label3D" parent="."]
+position = Vector3(0, 1.4, 0)
+text = "COMMAND ROOM\nMILITARY CONTROL"
+font_size = 60
+pixel_size = 0.007
+modulate = Color(1, 0.75, 0.2, 1)
+billboard = 1
+no_depth_test = false
