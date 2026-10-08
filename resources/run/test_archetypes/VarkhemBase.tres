@@ -7,27 +7,28 @@
 [ext_resource type="Resource" path="res://resources/run/test_templates/TestVarkhemBaseSemantic.tres" id="6"]
 [ext_resource type="Script" path="res://resources/run/ModuleDefinitionResource.gd" id="7"]
 [ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_encounter_room.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/run/test_templates/TestVarkhemLateWing.tres" id="9_late_wing"]
 
 [sub_resource type="Resource" id="Small"]
 script = ExtResource("4")
 size_id = &"SMALL"
 min_modules = 13
 max_modules = 13
-role_min_counts = {"CORRIDOR": 2, "ROOM": 0, "JUNCTION": 2}
+role_min_counts = {"CORRIDOR": 3, "ROOM": 0, "JUNCTION": 2}
 role_max_counts = {"CORRIDOR": 6, "ROOM": 0, "JUNCTION": 2}
 [sub_resource type="Resource" id="Medium"]
 script = ExtResource("4")
 size_id = &"MEDIUM"
 min_modules = 17
 max_modules = 17
-role_min_counts = {"CORRIDOR": 2, "ROOM": 0, "JUNCTION": 2}
+role_min_counts = {"CORRIDOR": 3, "ROOM": 0, "JUNCTION": 2}
 role_max_counts = {"CORRIDOR": 8, "ROOM": 0, "JUNCTION": 4}
 [sub_resource type="Resource" id="Large"]
 script = ExtResource("4")
 size_id = &"LARGE"
 min_modules = 21
 max_modules = 21
-role_min_counts = {"CORRIDOR": 2, "ROOM": 0, "JUNCTION": 2}
+role_min_counts = {"CORRIDOR": 3, "ROOM": 0, "JUNCTION": 2}
 role_max_counts = {"CORRIDOR": 10, "ROOM": 0, "JUNCTION": 4}
 
 [sub_resource type="Resource" id="CentralHubPhysical"]
@@ -179,6 +180,7 @@ required_plan_tags = [&"HUB_DISTRIBUTION"]
 [sub_resource type="Resource" id="Command"]
 script = ExtResource("5")
 semantic_id = &"COMMAND_ROOM"
+display_name = "Command Room"
 allowed_archetypes = [&"VARKHEM_BASE"]
 allowed_sectors = [&"GROUND_FLOOR", &"UPPER_FLOOR"]
 preferred_sectors = [&"UPPER_FLOOR"]
@@ -190,14 +192,14 @@ prefer_far_from_start = true
 assignment_priority = 100
 main_path_preference = 2
 branch_preference = 1
-future_gameplay_tags = [&"BOSS_ENCOUNTER_FUTURE", &"DUNGEON_OBJECTIVE"]
+future_gameplay_tags = [&"BOSS_ENCOUNTER_FUTURE", &"DUNGEON_OBJECTIVE", &"NEUTRALIZE_COMMAND_FUTURE"]
 physical_module_variants = [SubResource("CommandPhysical")]
 physical_variant_required = true
 
 [sub_resource type="Resource" id="Ground"]
 script = ExtResource("2")
 sector_id = &"GROUND_FLOOR"
-template_pool = [ExtResource("6")]
+template_pool = [ExtResource("6"), ExtResource("9_late_wing")]
 size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
 light_profile_id = &"NORMAL_HIGH"
 population_profile_id = &"MEDIUM"
@@ -207,7 +209,7 @@ semantic_locations = [SubResource("Access"), SubResource("Barracks"), SubResourc
 [sub_resource type="Resource" id="Basement"]
 script = ExtResource("2")
 sector_id = &"BASEMENT"
-template_pool = [ExtResource("6")]
+template_pool = [ExtResource("6"), ExtResource("9_late_wing")]
 size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
 light_profile_id = &"NORMAL"
 population_profile_id = &"HIGH_RISK"
@@ -217,7 +219,7 @@ semantic_locations = [SubResource("Prison"), SubResource("Barracks")]
 [sub_resource type="Resource" id="Upper"]
 script = ExtResource("2")
 sector_id = &"UPPER_FLOOR"
-template_pool = [ExtResource("6")]
+template_pool = [ExtResource("6"), ExtResource("9_late_wing")]
 size_profiles = [SubResource("Small"), SubResource("Medium"), SubResource("Large")]
 light_profile_id = &"NORMAL_HIGH"
 population_profile_id = &"MEDIUM"

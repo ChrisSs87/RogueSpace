@@ -1,0 +1,34 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/tests/Stage6JArchetypePrototype.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/tests/varkhem_v2_1_mobile_controls.gd" id="2"]
+
+[node name="VarkhemV21ExperienceTest" instance=ExtResource("1")]
+initial_seed = 65001
+test_archetype_index = 1
+
+[node name="V21Controls" type="CanvasLayer" parent="."]
+script = ExtResource("2")
+
+[node name="Panel" type="VBoxContainer" parent="V21Controls"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -580.0
+offset_right = -20.0
+offset_top = 110.0
+mouse_filter = 2
+
+[node name="Info" type="Label" parent="V21Controls/Panel"]
+theme_override_font_sizes/font_size = 16
+mouse_filter = 2
+
+[node name="Buttons" type="HBoxContainer" parent="V21Controls/Panel"]
+theme_override_constants/separation = 12
+
+[node name="NewSeed" type="Button" parent="V21Controls/Panel/Buttons"]
+custom_minimum_size = Vector2(180, 56)
+text = "NEW SEED"
+
+[node name="NextSector" type="Button" parent="V21Controls/Panel/Buttons"]
+custom_minimum_size = Vector2(180, 56)
+text = "NEXT SECTOR"
