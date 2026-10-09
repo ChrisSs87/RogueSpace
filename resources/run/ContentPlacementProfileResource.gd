@@ -6,6 +6,9 @@ class_name ContentPlacementProfileResource
 @export var display_name := ""
 @export var min_slots := 0
 @export var max_slots := 0
+## Optional declarative population ranges keyed by DungeonSizeProfile.size_id.
+## Empty preserves the previous budget/RNG path for legacy profiles.
+@export var slot_count_ranges_by_size: Dictionary[StringName, Vector2i] = {}
 @export var category_weights: Array[ContentCategoryWeightResource] = []
 @export var allowed_node_roles: Array[StringName] = []
 @export var forbidden_node_roles: Array[StringName] = []
@@ -17,7 +20,15 @@ class_name ContentPlacementProfileResource
 ## Opt-in coverage, in order. Atomic groups must fit the existing slot budget.
 ## Empty retains legacy selection byte-for-byte.
 @export var priority_slot_tags: Array[StringName] = []
+## Optional coverage tag -> semantic location. The requirement is active only
+## when that location owns eligible slots with the tag. Other coverage and the
+## population budget remain unchanged; an absent location is never substituted.
+@export var coverage_semantic_conditions: Dictionary[StringName, StringName] = {}
 @export var procedural_patrols := false
+## Opt-in conservative START safety: the entire declared patrol (including
+## spawn-to-first-point) must stay outside every eligible payload's visual
+## range. Does not rely on a favorable heading, light level or temporary LOS.
+@export var protect_start_from_patrol_vision := false
 ## Optional budget-capacity reference during redistribution. Keeps the count
 ## that the previous tagged slot set could supply, without selecting only it.
 @export var budget_capacity_tag: StringName

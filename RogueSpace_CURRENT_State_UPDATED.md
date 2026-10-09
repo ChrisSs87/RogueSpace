@@ -1214,3 +1214,35 @@ Esta workspace es la nueva base local oficial de RogueSpace. La sincronización
 con Google Drive queda pendiente de identificar una carpeta destino accesible;
 la búsqueda de Drive no devolvió una carpeta ni archivo RogueSpace y no se creó
 una copia paralela.
+
+### Recuperación local Varkhem V2.1.4.1 — validación funcional y Android
+
+El usuario confirmó pruebas manuales Android satisfactorias de
+`RogueSpace_Varkhem_V2_1_4_1_TEST_MOBILE.zip`. La batería focalizada completó
+15/15 ejecuciones PASS funcional / EXIT_0. El punto de recuperación local
+conserva las mejoras previas V2.1.3 de orientación, población/cobertura y
+seguridad dinámica de START, junto con la suspensión lógica V2.1.4 durante
+combate/recompensas y la corrección del origen/destino del raycast visual.
+
+La cancelación TOTAL de APPROACH por timeout permite solicitar un nuevo
+encuentro cuando un tick normal de percepción confirma contacto y el enemigo
+alcanza la banda vigente de combate. DROP parcial conserva el requisito de
+perder contacto y adquirirlo nuevamente; no se elimina globalmente la
+protección de reentrada. Se preservan los fixtures separados SOUND/VISION,
+DROP, suspensión y el diagnóstico de timeout.
+
+`NATIVE_SHUTDOWN_AV` continúa ABIERTA: reproducida anteriormente, causa raíz
+indeterminada. No se declara resuelta por la ausencia de cierres en esta
+batería. La importación de escritorio del ZIP terminó EXIT_0, pero registró
+`Safe save failed`; el arranque de la copia extraída terminó EXIT_0 con
+assembly/nav válidos. El usuario validó luego su funcionamiento en Android.
+
+Observación Android pendiente: bajón transitorio de FPS al iniciar una segunda
+seed, seguido de estabilización. Registrado sin investigación ni causa
+atribuida; no constituye una medición de rendimiento ni una corrección.
+
+Este cierre es un checkpoint LOCAL en
+`feature/varkhem-combat-perception-v2-1-4`, no una integración a `main`.
+V2.1.5 se prepara desde ese checkpoint en rama/worktree independiente, sin
+implementar todavía mecánicas ambientales. Detalle reproducible:
+`docs/VARKHEM_V2_1_4_1_RECOVERY.md`.

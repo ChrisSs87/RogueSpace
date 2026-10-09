@@ -4,7 +4,7 @@ class_name ContentPlacementDirector
 ## Resuelve sólo ocupación semántica. Los consumidores futuros recibirán
 ## ContentSlot + un content ID/resource, sin que este director conozca Enemy,
 ## loot, diálogos o escenas concretas.
-static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, placement_seed: int) -> ContentPlacementPlan:
+static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, placement_seed: int, size_id: StringName = &"") -> ContentPlacementPlan:
 	var result := ContentPlacementPlan.new()
 	result.seed = placement_seed
 	result.profile_id = profile.stable_id if profile != null else &""
@@ -32,14 +32,44 @@ static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, p
 			slot.global_transform = module_transform * local_transform
 			result.all_slots.append(slot)
 	var candidates := _eligible_slots(plan, profile, result.all_slots)
+	if profile.protect_start_from_patrol_vision:
+		var safe_candidates: Array[DungeonContentSlot] = []
+		for slot in candidates:
+			var exposure := patrol_start_exposure(slot, plan, profile)
+			if exposure.is_empty():
+				safe_candidates.append(slot)
+			else:
+				exposure["slot"] = slot.unique_id
+				result.start_safety_rejections.append(exposure)
+		# Conditional coverage may be absent in this sector, but safety filtering
+		# must never turn an existing required post into optional coverage.
+		for tag in profile.coverage_semantic_conditions:
+			var existed := candidates.any(func(slot: DungeonContentSlot): return slot.tags.has(tag))
+			var remains := safe_candidates.any(func(slot: DungeonContentSlot): return slot.tags.has(tag))
+			if existed and not remains:
+				result.generation_error = "START safety conflicts with required coverage %s" % tag
+				return result
+		candidates = safe_candidates
 	var rng := RandomNumberGenerator.new()
 	rng.seed = placement_seed + int(profile.stable_id.hash())
-	var desired := rng.randi_range(profile.min_slots, profile.max_slots) if profile.max_slots >= profile.min_slots else profile.min_slots
+	var minimum := profile.min_slots
+	var maximum := profile.max_slots
+	if not profile.slot_count_ranges_by_size.is_empty():
+		if not profile.slot_count_ranges_by_size.has(size_id):
+			result.generation_error = "missing population size profile %s" % size_id
+			return result
+		var bounds: Vector2i = profile.slot_count_ranges_by_size[size_id]
+		if bounds.x < 0 or bounds.y < bounds.x:
+			result.generation_error = "invalid population range %s" % size_id
+			return result
+		minimum = bounds.x
+		maximum = bounds.y
+	var desired := rng.randi_range(minimum, maximum) if maximum >= minimum else minimum
 	if not profile.budget_capacity_tag.is_empty():
 		var capacity := candidates.filter(func(slot: DungeonContentSlot): return slot.tags.has(profile.budget_capacity_tag)).size()
 		desired = mini(desired, capacity)
 	if not profile.priority_slot_tags.is_empty():
-		_select_grouped(result, candidates, profile, rng, desired)
+		_select_grouped(result, candidates, profile, rng, desired, plan)
 		return result
 	while result.selected_slots.size() < desired and not candidates.is_empty():
 		var selected_index := _weighted_slot_index(candidates, profile, rng)
@@ -62,7 +92,51 @@ static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, p
 	return result
 
 
-static func _select_grouped(result: ContentPlacementPlan, candidates: Array[DungeonContentSlot], profile: ContentPlacementProfileResource, rng: RandomNumberGenerator, desired: int) -> void:
+## An exact horizontal distance bound over ALL route segments, not endpoint
+## sampling. Enemy's first vision condition rejects anything outside this
+## range, regardless of FOV/LOS/light/exposure. We deliberately reject uncertain
+## in-range positions even if currently facing away or behind a wall: patrol
+## pauses/turns cannot invalidate an accepted safety certificate.
+## Current modular START's PlayerSpawn shares its root XZ; Y is irrelevant to
+## Enemy._passes_vision_baseline's horizontal range gate.
+static func patrol_start_exposure(slot: DungeonContentSlot, plan: DungeonPlan, profile: ContentPlacementProfileResource) -> Dictionary:
+	if slot.category != &"ENCOUNTER": return {}
+	var start: Variant = null
+	for id in plan.module_ids:
+		if plan.module_types[id] == &"START" and plan.assembly_transforms.has(id):
+			start = plan.assembly_transforms[id].origin
+			break
+	if start == null: return {"reason":"missing START transform"}
+	var radius := -1.0
+	for mapping in profile.runtime_category_pools:
+		if mapping == null or mapping.category != slot.category or mapping.pool == null: continue
+		for entry in mapping.pool.entries:
+			if entry == null or entry.weight <= 0.0: continue
+			var enemy := entry.payload as EnemyResource
+			if enemy == null: return {"reason":"invalid encounter payload"}
+			radius = maxf(radius, enemy.vision_range_tiles * GameBalance.tile_size_m)
+	if radius < 0.0: return {"reason":"missing encounter payload range"}
+	var points: Array[Vector3] = [slot.global_transform.origin]
+	if profile.procedural_patrols:
+		var patrol := ContentPatrolRoutes.planned_points(slot, plan)
+		if patrol.size() < 2: return {"reason":"missing complete patrol"}
+		points.append_array(patrol)
+	var minimum := INF
+	var target := Vector2(start.x, start.z)
+	# Closing segment is conservative for >2 points; existing routes are straight
+	# and traversed in both directions. Include initial travel and every endpoint.
+	for index in points.size():
+		var a := Vector2(points[index].x, points[index].z)
+		var b := Vector2(points[(index+1) % points.size()].x, points[(index+1) % points.size()].z)
+		var segment := b-a
+		var t := clampf((target-a).dot(segment)/segment.length_squared(), 0.0, 1.0) if segment.length_squared() > 0.0 else 0.0
+		minimum = minf(minimum, target.distance_to(a+segment*t))
+	if minimum <= radius:
+		return {"reason":"patrol enters START visual envelope", "minimum_distance_m":minimum, "pool_visual_range_m":radius}
+	return {}
+
+
+static func _select_grouped(result: ContentPlacementPlan, candidates: Array[DungeonContentSlot], profile: ContentPlacementProfileResource, rng: RandomNumberGenerator, desired: int, plan: DungeonPlan) -> void:
 	var groups: Array = []
 	var keys := {}
 	for slot in candidates:
@@ -73,6 +147,10 @@ static func _select_grouped(result: ContentPlacementPlan, candidates: Array[Dung
 			groups.append([])
 		groups[keys[key]].append(slot)
 	var priorities := profile.priority_slot_tags.duplicate()
+	for tag in profile.coverage_semantic_conditions:
+		var available := candidates.any(func(slot: DungeonContentSlot): return slot.tags.has(tag) and _matches_coverage_location(plan, profile, slot, tag))
+		if not available:
+			priorities.erase(tag)
 	while result.selected_slots.size() < desired:
 		var eligible: Array = []
 		var tag: StringName = priorities.pop_front() if not priorities.is_empty() else &""
@@ -88,6 +166,8 @@ static func _select_grouped(result: ContentPlacementPlan, candidates: Array[Dung
 		if eligible.is_empty():
 			if not tag.is_empty():
 				result.generation_error = "no slot group for required coverage %s" % tag
+			elif not profile.slot_count_ranges_by_size.is_empty():
+				result.generation_error = "insufficient slot groups for population budget %s (selected %s)" % [desired, result.selected_slots.size()]
 			return
 		var selected: Array = eligible[rng.randi_range(0, eligible.size()-1)]
 		groups.erase(selected)
@@ -95,6 +175,16 @@ static func _select_grouped(result: ContentPlacementPlan, candidates: Array[Dung
 			slot.occupied = true
 			slot.occupant_id = StringName("reserved:%s" % profile.stable_id)
 			result.selected_slots.append(slot)
+	if not priorities.is_empty():
+		result.generation_error = "population budget exhausted before required coverage %s" % priorities
+
+
+static func _matches_coverage_location(plan: DungeonPlan, profile: ContentPlacementProfileResource, slot: DungeonContentSlot, tag: StringName) -> bool:
+	var semantic_id: StringName = profile.coverage_semantic_conditions[tag]
+	for location: DungeonSemanticLocation in plan.semantic_locations:
+		if location.definition != null and location.definition.semantic_id == semantic_id and location.node_id == slot.node_id:
+			return true
+	return false
 
 
 static func _eligible_slots(plan: DungeonPlan, profile: ContentPlacementProfileResource, slots: Array[DungeonContentSlot]) -> Array[DungeonContentSlot]:
@@ -108,6 +198,12 @@ static func _eligible_slots(plan: DungeonPlan, profile: ContentPlacementProfileR
 		if profile.forbidden_node_roles.has(role) or not _tags_match(slot.tags, profile.required_slot_tags, profile.forbidden_slot_tags):
 			continue
 		if _category_weight(profile, slot.category) <= 0.0:
+			continue
+		var matches_location := true
+		for tag in profile.coverage_semantic_conditions:
+			if slot.tags.has(tag) and not _matches_coverage_location(plan, profile, slot, tag):
+				matches_location = false
+		if not matches_location:
 			continue
 		result.append(slot)
 	return result

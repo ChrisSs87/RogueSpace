@@ -1,6 +1,22 @@
 extends RefCounted
 class_name ContentPatrolRoutes
 
+## Shared source of real world-space patrol points for placement and bake-time
+## validation. Includes no sampling or inferred paths.
+static func planned_points(slot: DungeonContentSlot, plan: DungeonPlan) -> Array[Vector3]:
+	var points: Array[Vector3] = []
+	if slot.definition == null or slot.definition.patrol == null or plan == null:
+		return points
+	var definition: ModuleDefinitionResource = plan.module_definitions.get(slot.node_id)
+	if definition == null or not plan.assembly_transforms.has(slot.node_id):
+		return points
+	var transform: Transform3D = plan.assembly_transforms[slot.node_id]
+	for fraction in slot.definition.patrol.footprint_points:
+		var point := transform * Vector3(fraction.x * definition.footprint_size.x, 0, fraction.y * definition.footprint_size.y)
+		point.y = slot.global_transform.origin.y
+		points.append(point)
+	return points
+
 ## Bounded route preparation, after the real bake. Enemy remains sole AI owner.
 static func build(slot: DungeonContentSlot, plan: DungeonPlan, root: Node3D, navigation_map: RID, capsule: Shape3D) -> Dictionary:
 	var spec := slot.definition.patrol
@@ -11,11 +27,7 @@ static func build(slot: DungeonContentSlot, plan: DungeonPlan, root: Node3D, nav
 		return {"error":"missing assembled module"}
 	var transform: Transform3D = plan.assembly_transforms[slot.node_id]
 	var inverse := transform.affine_inverse()
-	var points: Array[Vector3] = []
-	for fraction in spec.footprint_points:
-		var point := transform * Vector3(fraction.x * definition.footprint_size.x, 0, fraction.y * definition.footprint_size.y)
-		point.y = slot.global_transform.origin.y
-		points.append(point)
+	var points := planned_points(slot, plan)
 	var shape_query := PhysicsShapeQueryParameters3D.new()
 	shape_query.shape = capsule
 	shape_query.collision_mask = 1

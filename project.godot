@@ -69,6 +69,7 @@ RunState="*res://autoloads/RunState.tscn"
 CombatEncounterManager="*res://autoloads/CombatEncounterManager.tscn"
 CombatManager="*res://autoloads/CombatManager.gd"
 RewardManager="*res://autoloads/RewardManager.tscn"
+ExplorationState="*res://autoloads/ExplorationState.gd"
 
 [rendering]
 

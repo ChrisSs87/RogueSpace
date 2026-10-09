@@ -96,6 +96,7 @@ func is_encounter_active() -> bool:
 
 
 func _process(delta: float) -> void:
+	if ExplorationState.is_suspended(): return
 	if _window_timer >= 0.0:
 		_window_timer -= delta
 		if _window_timer <= 0.0:
@@ -113,6 +114,7 @@ func _process(delta: float) -> void:
 ## abierta pueden sumarse. Un rechazo evita que el enemigo haga cola para el
 ## siguiente combate sin haber perdido y vuelto a detectar al jugador.
 func request_encounter_candidate(enemy: Node3D, from_ambush: bool = false) -> int:
+	if ExplorationState.is_suspended(): return REJECTED_CLOSED
 	if enemy in _pending_enemies:
 		return CANDIDATE_ACCEPTED
 	if _encounter_locked:
@@ -294,9 +296,12 @@ func _resolve_approach_timeout() -> void:
 		return
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	var ready: Array = _pending_enemies.filter(func(enemy): return _is_combat_ready(enemy, player))
+	# Sin participantes listos no comenzará COMBAT: es cancelación total,
+	# no DROP parcial de un encuentro que continúa con otros combatientes.
+	var total_approach_cancelled := ready.is_empty()
 	for enemy in _pending_enemies:
 		if enemy not in ready and is_instance_valid(enemy) and enemy.has_method("abort_combat_approach"):
-			enemy.abort_combat_approach()
+			enemy.abort_combat_approach(total_approach_cancelled)
 	_pending_enemies = ready
 	_enemies_in_position = ready
 	if ready.is_empty():

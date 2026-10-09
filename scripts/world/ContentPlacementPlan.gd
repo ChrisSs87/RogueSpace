@@ -6,6 +6,8 @@ var profile_id: StringName
 var all_slots: Array[DungeonContentSlot] = []
 var selected_slots: Array[DungeonContentSlot] = []
 var generation_error := ""
+## Opt-in placement exclusions; never silently reduce a requested population.
+var start_safety_rejections: Array[Dictionary] = []
 
 func is_valid() -> bool:
 	if not generation_error.is_empty():

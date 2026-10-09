@@ -29,7 +29,8 @@ func _additional_physical_errors(dungeon: Node3D) -> Array:
 	var report: Dictionary = dungeon.get_runtime_content_metrics()
 	if not report.patrol_rejected.is_empty(): errors.append("rejected patrol %s" % report.patrol_rejected)
 	var count: int = report.spawned.size()
-	if count < 2 or count > 4: errors.append("population outside 2-4")
+	var profile: ContentPlacementProfileResource = dungeon.current_content_profile
+	if count < profile.min_slots or count > profile.max_slots: errors.append("population outside configured budget")
 	var circulation := 0
 	var rooms := 0
 	var hub := 0

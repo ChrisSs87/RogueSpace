@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="PackedScene" path="res://scenes/tests/VarkhemV212ExperienceTest.tscn" id="1"]
+[node name="VarkhemV213ExperienceTest" instance=ExtResource("1")]
+initial_seed = 65001

@@ -5,15 +5,22 @@ extends Node3D
 ## encuentro y ambos recibieron APPROACH por las rutas reales de percepción.
 const ENEMY_SCENE := preload("res://scenes/enemies/Enemy.tscn")
 const ORC_RESOURCE := preload("res://resources/enemies/orco_melee.tres")
+var combat_starts := 0
+var combat_endings := 0
+var reward_starts := 0
 
 
 class TestPlayer extends Node3D:
 	var frozen := false
 	func get_current_noise_radius_m() -> float: return 0.0
 	func freeze_for_combat() -> void: frozen = true
+	func unfreeze_after_combat() -> void: frozen = false
 
 
 func _ready() -> void:
+	CombatManager.combat_started.connect(func(): combat_starts += 1)
+	CombatManager.combat_ended.connect(func(): combat_endings += 1)
+	RewardManager.reward_sequence_started.connect(func(): reward_starts += 1)
 	var sandbox: Node3D = $DungeonSandbox
 	await get_tree().create_timer(0.3).timeout
 	# Aísla los dos actores de este escenario; los habitantes reales de la
@@ -38,7 +45,6 @@ func _ready() -> void:
 	b.enemy_resource = ORC_RESOURCE
 	sandbox.add_child(b)
 	b.global_position = Vector3(16.77, 1, -1.23)
-
 	if not await _wait_for_two_candidates(a, b, 5.0):
 		_fail("Fase A: A y B no fueron candidatos del mismo encuentro")
 		return
@@ -65,7 +71,7 @@ func _ready() -> void:
 
 	# Fase C: recién ahora B es movido a un carril navegable de prueba y se
 	# levanta una jaula BAJA. Las paredes bloquean su CharacterBody3D, pero no
-	# el rayo de visión (eye=2.5 m / target=2.0 m), por lo que la imposibilidad
+	# el rayo de visión físico (cápsula superior / centro del TestPlayer), por lo que la imposibilidad
 	# es física de APPROACH, no un rechazo previo de percepción.
 	_add_low_approach_cage(sandbox, b.global_position)
 	a.set_physics_process(true)
@@ -83,37 +89,58 @@ func _ready() -> void:
 	# pública real de Player y B sigue siendo IA de exploración.
 	var drop_cleanup_ok := b.get_debug_ai_owner() == "EXPLORATION" and b.get_debug_movement_source() != "COMBAT POSITIONING" and not b.get_debug_has_combat_positioning()
 	var sound_position := b.global_position + Vector3(1.0, 0.0, 0.0)
+	var frozen_transform := b.global_transform
+	var frozen_source := b.get_debug_last_known_source()
+	var frozen_known := b.get_debug_last_known_position()
+	var body_space := PhysicsServer3D.body_get_space(b.get_rid())
 	EventBus.player_noise_emitted.emit(sound_position, 5.0, 5.0)
-	await get_tree().physics_frame
-	await get_tree().physics_frame
-	var sound_recovery_ok := b.get_debug_last_known_source() == "SOUND" and b.get_debug_ai_owner() == "EXPLORATION" and not b.get_debug_ai_stalled()
+	b._on_perception_tick()
+	for frame in 90: await get_tree().physics_frame
+	var suspended_ok := ExplorationState.is_suspended() and b.global_transform == frozen_transform and b.get_debug_last_known_source() == frozen_source and b.get_debug_last_known_position() == frozen_known and body_space.is_valid() and PhysicsServer3D.body_get_space(b.get_rid()) == body_space and combat_starts == 1 and reward_starts == 0
+	suspended_ok = suspended_ok and CombatEncounterManager.request_encounter_candidate(b) == CombatEncounterManager.REJECTED_CLOSED
 	print("Stage6A3B dropped recovery | owner %s | source %s | positioning %s | sound %s | nav %s" % [b.get_debug_ai_owner(), b.get_debug_movement_source(), b.get_debug_has_combat_positioning(), b.get_debug_last_known_source(), b._debug_nav_target_str])
-	passed = passed and drop_cleanup_ok and sound_recovery_ok
+	passed = passed and drop_cleanup_ok and suspended_ok
 
 	# B ya fue retirado del encuentro bloqueado y no se agrega al combate
 	# actual. Al resetear el manager no puede aparecer una cola automática:
 	# tendría que volver a detectar y solicitar un encuentro desde cero.
+	# Close through the existing public combat/reset contracts before expecting
+	# exploration stimuli again. Reset does not award victory rewards.
+	CombatManager.reset_after_defeat()
 	CombatEncounterManager.reset()
+	player.unfreeze_after_combat()
+	a.queue_free()
 	for cage_wall in get_tree().get_nodes_in_group("stage5g_drop_cage"):
 		cage_wall.queue_free()
 	await get_tree().create_timer(0.5).timeout
-	var no_followup_queue := CombatEncounterManager.get_debug_pending_count() == 0 and CombatManager.get_combatant_count() == 1
+	var no_followup_queue := CombatEncounterManager.get_debug_pending_count() == 0 and CombatManager.get_combatant_count() == 0 and combat_endings == 1 and reward_starts == 0 and not ExplorationState.is_suspended()
 	# B debe perder contacto antes de recuperar elegibilidad; así no existe
 	# requeue automático, pero tampoco un bloqueo permanente tras DROPPED.
 	player.global_position = Vector3(100.0, 1.0, 0.0)
 	await get_tree().create_timer(0.6).timeout
 	var lost_contact := not b.is_encounter_contact_valid()
-	var b_forward := -b.global_transform.basis.z
-	b_forward.y = 0.0
-	# 0.4 m superpone el CharacterBody del Player con la cápsula 0.4 m de B:
-	# la física puede expulsarlo antes del tick perceptivo y convertir la
-	# comprobación de reingreso en un falso FOV:NO. 1.4 m sigue dentro del
-	# proximity override real (1.5 m) sin solapar cuerpos.
-	player.global_position = b.global_position + b_forward.normalized() * 1.4
-	await get_tree().create_timer(1.3).timeout
-	var future_eligible := b._has_requested_encounter and CombatEncounterManager.get_debug_pending_count() > 0
-	print("Stage6A3B future encounter | lost %s | B requested %s | pending %d | state %s | contact %s | fov %s los %s | excluded %s wait_loss %s join_closed %s" % [lost_contact, b._has_requested_encounter, CombatEncounterManager.get_debug_pending_count(), b.get_debug_state_name(), b.is_encounter_contact_valid(), b._debug_fov_str, b._debug_los_str, b._excluded_from_active_encounter, b._must_lose_contact_before_reentry, b._encounter_join_closed])
-	passed = passed and no_followup_queue and lost_contact and future_eligible
+	EventBus.player_noise_emitted.emit(b.global_position + Vector3(1,0,0),5.0,5.0)
+	var sound_recovery_ok := b.get_debug_last_known_source() == "SOUND" and b.get_debug_ai_owner() == "EXPLORATION"
+	var sound_candidate_seen := b._current_contact_kind == "SOUND" and b._has_requested_encounter and CombatEncounterManager.get_debug_pending_count() == 1
+	var noise_target := b.get_debug_last_known_position()
+	# Keep the player remote: sound may cause investigation and temporary
+	# admission, but must not be mistaken for confirmed visual acquisition.
+	await get_tree().create_timer(0.6).timeout
+	var sound_expired_ok := not b._has_recent_sound_contact() and not b.is_encounter_contact_valid() and not b._has_requested_encounter and CombatEncounterManager.get_debug_pending_count() == 0 and b._last_vision_result == Enemy.VISION_NONE
+	var investigating_sound := b.get_debug_last_known_source() == "SOUND" and b.get_debug_last_known_position() == noise_target and b.get_debug_state_name() in ["CHASE","ALERT"]
+	print("V214_DROP_SOUND | recovered %s | candidate_seen %s | expired %s | investigating %s" % [sound_recovery_ok,sound_candidate_seen,sound_expired_ok,investigating_sound])
+	# Visual readquisition is mandatory in the separate open-floor test, not
+	# conflated with this legitimate auditory investigation beside a wall.
+	var returned := false
+	var deadline := Time.get_ticks_msec()+int((b.enemy_resource.lose_target_timeout_sec+2*b.enemy_resource.perception_interval_sec)*1000)
+	while Time.get_ticks_msec() < deadline:
+		if b.get_debug_state_name() == "PATROL":
+			returned = true
+			break
+		await get_tree().physics_frame
+	var recovered := returned and not ExplorationState.is_suspended() and b.get_debug_ai_owner() == "EXPLORATION" and not b.get_debug_has_combat_positioning()
+	passed = passed and no_followup_queue and lost_contact and sound_recovery_ok and sound_candidate_seen and sound_expired_ok and investigating_sound and recovered and combat_starts == 1 and combat_endings == 1 and reward_starts == 0 and CombatEncounterManager.get_debug_pending_count() == 0
+	print("V214_DROP_CONTRACT | suspended %s | cleanup %s | no_queue %s | lost %s | sound_recovered %s | sound_expired %s | returned %s | starts %d endings %d rewards %d" % [suspended_ok,drop_cleanup_ok,no_followup_queue,lost_contact,sound_recovery_ok,sound_expired_ok,recovered,combat_starts,combat_endings,reward_starts])
 	if passed:
 		print("Stage5G drop integration: PASS (A solo; B dropped sin cola posterior)")
 		get_tree().quit(0)
@@ -157,14 +184,15 @@ func _wait_for_drop_or_combat(b: Enemy, timeout_sec: float) -> bool:
 
 func _add_low_approach_cage(parent: Node3D, center: Vector3) -> void:
 	# Interior de 1.3 m: B cabe, pero su cápsula de radio 0.4 m no puede salir.
-	# Las paredes llegan sólo a 0.8 m de alto para conservar LOS real sobre ellas.
+	# Top=1.1 m with this fixture's center y=1; below the corrected sight ray
+	# while still intersecting the capsule. Preserve physical APPROACH failure.
 	var half_extent := 0.65
 	var thickness := 0.18
 	for offset_and_size in [
-		[Vector3(half_extent, 0.4, 0), Vector3(thickness, 0.8, 1.66)],
-		[Vector3(-half_extent, 0.4, 0), Vector3(thickness, 0.8, 1.66)],
-		[Vector3(0, 0.4, half_extent), Vector3(1.66, 0.8, thickness)],
-		[Vector3(0, 0.4, -half_extent), Vector3(1.66, 0.8, thickness)],
+		[Vector3(half_extent, -0.3, 0), Vector3(thickness, 0.8, 1.66)],
+		[Vector3(-half_extent, -0.3, 0), Vector3(thickness, 0.8, 1.66)],
+		[Vector3(0, -0.3, half_extent), Vector3(1.66, 0.8, thickness)],
+		[Vector3(0, -0.3, -half_extent), Vector3(1.66, 0.8, thickness)],
 	]:
 		var wall := StaticBody3D.new()
 		wall.add_to_group("stage5g_drop_cage")

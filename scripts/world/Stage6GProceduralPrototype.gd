@@ -1176,6 +1176,7 @@ func _clear_runtime_combat_before_regeneration() -> void:
 		return
 	CombatEncounterManager.reset()
 	CombatManager.reset_after_defeat()
+	ExplorationState.reset_for_regeneration()
 	var player := get_tree().get_first_node_in_group("player") as Node3D
 	if player != null and player.has_method("unfreeze_after_combat"):
 		player.unfreeze_after_combat()
@@ -1294,7 +1295,11 @@ func _rebuild_content_placement() -> void:
 		return
 	var profile := _active_content_profile()
 	current_content_profile = profile
-	current_content_plan = CONTENT_DIRECTOR.build(current_plan, profile, seed)
+	var content_size_id: StringName = &""
+	if sector_run != null and current_sector_index < sector_run.sector_size_profiles.size():
+		var size_profile := sector_run.sector_size_profiles[current_sector_index]
+		if size_profile != null: content_size_id = size_profile.size_id
+	current_content_plan = CONTENT_DIRECTOR.build(current_plan, profile, seed, content_size_id)
 	if not current_content_plan.is_valid():
 		push_error("6I content placement failed: %s" % current_content_plan.generation_error)
 		return

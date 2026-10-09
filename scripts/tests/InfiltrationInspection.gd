@@ -37,7 +37,8 @@ func _noise(_position: Vector3, radius: float, intensity: float) -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
-	info.text = info.text.replace("V2.1.1", "V2.1.2")
+	info.text = info.text.replace("V2.1.1", "V2.1.4")
+	info.text += "\nCOMBAT SUSPENDED" if ExplorationState.is_suspended() else "\nEXPLORATION ACTIVE"
 	elapsed += delta
 	if not infiltration or elapsed < 0.2: return
 	elapsed = 0.0
@@ -58,6 +59,7 @@ func _process(delta: float) -> void:
 				observed.state = state
 			observed_states[key] = observed
 			lines.append("%s %s %.1fm | %s | %s" % [enemy.get_meta("patrol_kind",&"NONE"),state,enemy.global_position.distance_to(player.global_position),enemy.get_debug_ai_owner(),observed.transition])
+			lines.append("  %s | LAST %s | LOOK %s | MOVE %s" % [enemy.get_debug_stimulus_source(),enemy.get_debug_last_known_position(),-enemy.global_basis.z,enemy.get_debug_physical_heading()])
 			var points: Array = enemy.get_meta("patrol_world_points",[])
 			if points.size() >= 2:
 				mesh.surface_begin(Mesh.PRIMITIVE_LINES,material)

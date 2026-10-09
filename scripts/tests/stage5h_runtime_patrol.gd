@@ -1,83 +1,108 @@
 extends Node3D
 
-## Prueba de runtime 5H. Instancia MainSandbox sin modificar su NavigationMap,
-## sus enemigos, su Player ni sus timers: es el mismo árbol que abre Android.
+## Real MainSandbox bodies, navigation, timers and ordinary encounter admission.
+## Nominal PATROL during COMBAT is not active exploration time.
 const PATROLLERS: Array[String] = ["OrcoMelee1", "OrcoMelee2", "OrcoPicaro1", "OrcoMelee3", "OrcoPicaro2"]
+const OBSERVATION_SEC := 10.0 # Original Stage5H budget, per phase.
+var failures: Array[String] = []
+var starts := 0
+var endings := 0
+var rewards := 0
 
+func _observe(sandbox: Node3D, names: Array[String], phase: String) -> Dictionary:
+	var rows := {}
+	for enemy_name in names:
+		var actor: Enemy = sandbox.get_node(enemy_name)
+		rows[enemy_name] = {"position":actor.global_position,"index":actor.get_patrol_runtime_debug().patrol_index,"distance":0.0,"active_sec":0.0,"suspended_sec":0.0,"index_changed":false,"max_stall":0.0}
+	var elapsed := 0.0
+	var frozen := {}
+	while elapsed < OBSERVATION_SEC:
+		var suspended := ExplorationState.is_suspended()
+		if suspended:
+			for enemy_name in names:
+				var actor: Enemy = sandbox.get_node(enemy_name)
+				if not frozen.has(enemy_name): frozen[enemy_name] = {"transform":actor.global_transform,"space":PhysicsServer3D.body_get_space(actor.get_rid())}
+		await get_tree().physics_frame
+		var delta := get_physics_process_delta_time()
+		elapsed += delta
+		for enemy_name in names:
+			var actor: Enemy = sandbox.get_node(enemy_name)
+			var row: Dictionary = rows[enemy_name]
+			var runtime := actor.get_patrol_runtime_debug()
+			if suspended:
+				row.suspended_sec += delta
+				var saved: Dictionary = frozen[enemy_name]
+				if actor.global_transform != saved.transform:
+					failures.append("%s moved during COMBAT" % enemy_name)
+					return rows
+				if not saved.space.is_valid() or PhysicsServer3D.body_get_space(actor.get_rid()) != saved.space:
+					failures.append("%s lost physics space during COMBAT" % enemy_name)
+					return rows
+			elif actor.get_debug_state_name() == "PATROL":
+				row.active_sec += delta
+				row.distance += actor.global_position.distance_to(row.position)
+				row.index_changed = row.index_changed or runtime.patrol_index != row.index
+				row.max_stall = maxf(row.max_stall,runtime.stall_elapsed_sec)
+			row.position = actor.global_position
+			row.index = runtime.patrol_index
+	for enemy_name in names:
+		var row: Dictionary = rows[enemy_name]
+		if row.active_sec >= 3.0 and row.distance < 0.5:
+			failures.append("%s no active patrol movement (%s)" % [enemy_name,phase])
+		if row.active_sec >= 9.0 and not row.index_changed:
+			failures.append("%s no patrol_index change during active exploration (%s)" % [enemy_name,phase])
+		if row.max_stall > 2.0:
+			failures.append("%s PATROL STALLED (%s)" % [enemy_name,phase])
+	print("V214_STAGE5H_%s=" % phase+JSON.stringify(rows))
+	return rows
 
 func _ready() -> void:
+	CombatManager.combat_started.connect(func(): starts += 1)
+	CombatManager.combat_ended.connect(func(): endings += 1)
+	RewardManager.reward_sequence_started.connect(func(): rewards += 1)
 	var sandbox: Node3D = $MainSandbox/DungeonSandbox
-	# Sincronización normal; no se toca NavigationServer ni se reposiciona nada.
+	var player: CharacterBody3D = $MainSandbox/Player
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	await get_tree().process_frame
-
-	var samples: Dictionary = {}
-	var indices: Dictionary = {}
-	var states: Dictionary = {}
-	var max_stalls: Dictionary = {}
+	var initial := await _observe(sandbox,PATROLLERS,"INITIAL")
+	var suspended_seen := false
+	var initial_progress := false
+	for row: Dictionary in initial.values():
+		suspended_seen = suspended_seen or row.suspended_sec > 0
+		initial_progress = initial_progress or row.distance >= 0.5
+	if not initial_progress: failures.append("no exploration progress before natural combat")
+	if not suspended_seen or starts != 1 or not ExplorationState.is_suspended():
+		failures.append("FIXTURE_CONFIGURATION: natural combat/suspension not observed")
+	var survivors: Array[String] = []
+	var participants: Array[Node3D] = []
+	for index in CombatManager.get_combatant_count(): participants.append(CombatManager.get_combatant_node(index))
 	for enemy_name in PATROLLERS:
-		samples[enemy_name] = []
-		indices[enemy_name] = []
-		states[enemy_name] = []
-		max_stalls[enemy_name] = 0.0
-
-	for second in range(11):
-		for enemy_name in PATROLLERS:
-			var enemy: Enemy = sandbox.get_node(enemy_name)
-			var runtime: Dictionary = enemy.get_patrol_runtime_debug()
-			samples[enemy_name].append(enemy.global_position)
-			indices[enemy_name].append(runtime["patrol_index"])
-			states[enemy_name].append(enemy.get_debug_state_name())
-			max_stalls[enemy_name] = maxf(max_stalls[enemy_name], runtime["stall_elapsed_sec"])
-		if second < 10:
-			await get_tree().create_timer(1.0).timeout
-
-	var report_lines: Array[String] = ["Stage5H DungeonSandbox runtime patrol report", "Enemy | t0 | t1 | t2 | t3 | t4 | t5 | t6 | t7 | t8 | t9 | t10 | total | index changed | max stall | states"]
-	var failures: Array[String] = []
-	for enemy_name in PATROLLERS:
-		var enemy: Enemy = sandbox.get_node(enemy_name)
-		var positions: Array = samples[enemy_name]
-		var total_distance := 0.0
-		for index in range(1, positions.size()):
-			total_distance += positions[index - 1].distance_to(positions[index])
-		var index_changed := false
-		for index in range(1, indices[enemy_name].size()):
-			index_changed = index_changed or indices[enemy_name][index] != indices[enemy_name][index - 1]
-		var formatted_positions: Array[String] = []
-		for position in positions:
-			formatted_positions.append("(%.2f,%.2f)" % [position.x, position.z])
-		var patrol_samples: int = 0
-		for state_name in states[enemy_name]:
-			if state_name == "PATROL":
-				patrol_samples += 1
-		var line := "%s | %s | %.2f | %s | %.2f | %s" % [enemy_name, " | ".join(formatted_positions), total_distance, index_changed, max_stalls[enemy_name], ",".join(states[enemy_name])]
-		report_lines.append(line)
-		if total_distance < 0.5 and patrol_samples >= 3:
-			failures.append("%s no se desplazó en MainSandbox" % enemy_name)
-		# Si el Player real hace que el orco abandone PATROL antes de completar
-		# un tramo, no se le exige alternar A/B. Eso es una diferencia válida
-		# respecto del test viejo, que no tenía Player durante los 5 segundos.
-		if not index_changed and patrol_samples >= 9:
-			failures.append("%s no cambió patrol_index en 10 s" % enemy_name)
-		if max_stalls[enemy_name] > 2.0:
-			failures.append("%s quedó PATROL STALLED %.2f s" % [enemy_name, max_stalls[enemy_name]])
-		print("RUNTIME PATROL %s | total %.2f m | index changed %s | patrol samples %d | max stall %.2f | final %s" % [enemy_name, total_distance, index_changed, patrol_samples, max_stalls[enemy_name], enemy.get_patrol_runtime_debug()])
-
-	var report := "\n".join(report_lines)
-	print(report)
-	var output := FileAccess.open("user://patrol_runtime_report.txt", FileAccess.WRITE)
+		if sandbox.get_node(enemy_name) not in participants: survivors.append(enemy_name)
+	if survivors.is_empty(): failures.append("FIXTURE_CONFIGURATION: no external patrollers")
+	# Public lifecycle reset and fixture participant cleanup, not forced AI states.
+	# Player rests inside the authored first room, away from surviving routes.
+	CombatManager.reset_after_defeat()
+	CombatEncounterManager.reset()
+	player.unfreeze_after_combat()
+	player.global_position = Vector3(1,1,3)
+	for actor in participants:
+		if is_instance_valid(actor): actor.queue_free()
+	await get_tree().physics_frame
+	var recovery := await _observe(sandbox,survivors,"RECOVERY")
+	for enemy_name in survivors:
+		var row: Dictionary = recovery[enemy_name]
+		if row.active_sec < 9.0 or row.distance < 0.5 or not row.index_changed:
+			failures.append("%s did not recover real patrol progress" % enemy_name)
+	if ExplorationState.is_suspended() or CombatManager.get_combatant_count() != 0 or CombatEncounterManager.get_debug_pending_count() != 0:
+		failures.append("combat/encounter not clean after recovery")
+	if starts != 1 or endings != 1 or rewards != 0: failures.append("duplicate combat/end/reward signals")
+	print("V214_STAGE5H_RESULT="+JSON.stringify({"valid":failures.is_empty(),"errors":failures,"starts":starts,"endings":endings,"rewards":rewards,"survivors":survivors}))
+	var output := FileAccess.open("user://patrol_runtime_report.txt",FileAccess.WRITE)
 	if output != null:
-		output.store_string(report + "\n")
+		output.store_string(JSON.stringify({"initial":initial,"recovery":recovery,"errors":failures}))
 		output.close()
-		print("Stage5H runtime report: user://patrol_runtime_report.txt")
+	if failures.is_empty(): print("Stage5H DungeonSandbox runtime patrol: PASS")
 	else:
-		push_warning("Stage5H: no se pudo escribir patrol_runtime_report.txt")
-
-	if failures.is_empty():
-		print("Stage5H DungeonSandbox runtime patrol: PASS")
-		get_tree().quit(0)
-	else:
-		for failure in failures:
-			push_error("Stage5H runtime patrol: %s" % failure)
-		get_tree().quit(1)
+		for failure in failures: push_error("Stage5H runtime patrol: "+failure)
+	get_tree().quit(0 if failures.is_empty() else 1)

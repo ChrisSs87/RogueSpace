@@ -77,6 +77,9 @@ var _encounter_debug_state: String = "NONE"
 var _encounter_owns_enemy: bool = false
 var _excluded_from_active_encounter: bool = false
 var _must_lose_contact_before_reentry: bool = false
+## Sólo la cancelación TOTAL por timeout permite recuperarse al alcanzar la
+## banda de combate. DROP parcial conserva pérdida de contacto obligatoria.
+var _cancelled_approach_reentry_pending: bool = false
 var _ambush_candidate_registered: bool = false
 
 var _target_player: Node3D = null
@@ -179,6 +182,15 @@ func _ready() -> void:
 	_update_debug_label()
 
 
+	ExplorationState.register_actor(self)
+
+
+func on_exploration_resumed(paused_msec: int) -> void:
+	# Preserve the remaining auditory contact memory, not wall-clock combat time.
+	if _last_heard_noise_time_msec >= 0:
+		_last_heard_noise_time_msec += paused_msec
+
+
 func _create_last_known_debug_marker() -> void:
 	_last_known_marker = MeshInstance3D.new()
 	_last_known_marker.name = "LastKnownDebugMarker"
@@ -222,6 +234,9 @@ func _apply_debug_color() -> void:
 # --- Movimiento y patrulla -------------------------------------------------
 
 func _physics_process(delta: float) -> void:
+	if ExplorationState.is_suspended():
+		velocity = Vector3.ZERO
+		return
 	_sync_navigation_anchor()
 	if enemy_resource == null or enemy_resource.is_boss or _state == State.COMBAT:
 		return
@@ -257,6 +272,10 @@ func _physics_process(delta: float) -> void:
 			velocity.x = 0.0
 			velocity.z = 0.0
 
+	# APPROACH can synchronously start combat inside this very callback.
+	if ExplorationState.is_suspended():
+		velocity = Vector3.ZERO
+		return
 	move_and_slide()
 	_update_actual_motion_debug(position_before_move, delta)
 	_update_exploration_stall_debug(position_before_move, delta)
@@ -659,6 +678,7 @@ const VISION_CHASE: String = "chase"
 
 
 func _on_perception_tick() -> void:
+	if ExplorationState.is_suspended(): return
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
@@ -677,11 +697,17 @@ func _on_perception_tick() -> void:
 	# coordenada del evento. Nunca reemplazarla acá por player.global_position.
 
 	if _encounter_contact_valid:
+		# Se evalúa únicamente en un tick sensorial normal posterior al abort,
+		# nunca desde el callback de timeout ni desde un evento SOUND aislado.
+		if _cancelled_approach_reentry_pending and not CombatEncounterManager.is_encounter_active() and is_combat_position_valid(player, CombatEncounterManager.combat_distance_tolerance_m):
+			_cancelled_approach_reentry_pending = false
+			_must_lose_contact_before_reentry = false
 		_try_register_encounter_candidate()
 	elif _must_lose_contact_before_reentry:
 		# Un DROPPED debe perder el rastro y obtener una percepción NUEVA antes
 		# de poder abrir otro encuentro; evita una cola automática al reset.
 		_must_lose_contact_before_reentry = false
+		_cancelled_approach_reentry_pending = false
 	elif _has_requested_encounter and not CombatEncounterManager.is_ambush_candidate_pending(self):
 		# Retira de inmediato un candidato que ya no percibe al jugador. Esto
 		# conserva la regla 5E: nunca se bloquea un combate por un contacto
@@ -756,8 +782,9 @@ func get_debug_fov_color() -> Color:
 ## propio dato de debug en N/A si no llegó a evaluarse (nunca inventa ni
 ## arrastra un valor viejo).
 func _passes_vision_baseline(player: Node3D) -> bool:
-	var eye_pos: Vector3 = global_position + Vector3.UP * 1.5
-	var target_pos: Vector3 = player.global_position + Vector3.UP * 1.0
+	var eye_pos := get_vision_origin()
+	var head := player.get_node_or_null("Head") as Node3D
+	var target_pos: Vector3 = head.global_position if head != null else player.global_position
 
 	var to_target: Vector3 = target_pos - eye_pos
 	var flat_to_target: Vector3 = Vector3(to_target.x, 0.0, to_target.z)
@@ -785,6 +812,15 @@ func _passes_vision_baseline(player: Node3D) -> bool:
 	var has_los: bool = _has_clear_line(eye_pos, target_pos)
 	_debug_los_str = "YES" if has_los else "NO"
 	return has_los
+
+
+func get_vision_origin() -> Vector3:
+	# Body origin is already capsule-centered, not floor height. The center
+	# of the capsule's upper hemisphere is a physical head/eye anchor.
+	var capsule := collision_shape.shape as CapsuleShape3D
+	if capsule != null:
+		return collision_shape.global_transform * Vector3(0,capsule.height*0.5-capsule.radius,0)
+	return global_position
 
 
 ## Capacidad de detección (0.0-1.0) según la tabla configurable del
@@ -822,6 +858,7 @@ func _has_recent_sound_contact() -> bool:
 ## se movió. Este handler es la única entrada auditiva: no consulta al Player
 ## y no comparte la ruta de la visión incompleta.
 func _on_player_noise_emitted(noise_position: Vector3, noise_radius_m: float, _intensity: float) -> void:
+	if ExplorationState.is_suspended(): return
 	if enemy_resource == null or enemy_resource.is_boss:
 		return
 	if not _can_hear_noise_event(noise_position, noise_radius_m):
@@ -1026,6 +1063,12 @@ func get_debug_last_known_source() -> String:
 	return _last_known_source
 
 
+func get_debug_stimulus_source() -> String:
+	if _encounter_contact_valid:
+		return "VISION" if _current_contact_kind == "VISION" else "NOISE"
+	return "LAST_KNOWN_POSITION" if _last_known_source != "NONE" else "NONE"
+
+
 func get_debug_ai_owner() -> String:
 	return "COMBAT" if _state == State.COMBAT else ("ENCOUNTER" if _encounter_owns_enemy else "EXPLORATION")
 
@@ -1085,6 +1128,12 @@ func _check_lose_target_timeout() -> void:
 		return
 
 	_state = State.PATROL if enemy_resource.can_patrol else State.IDLE
+	# Search ownership must end with ALERT. Keeping it in PATROL suppressed
+	# physical heading updates, so the enemy returned along its route backwards.
+	_searching_at_last_known = false
+	# Reuse the configured waypoint turn/pause before resuming a procedural
+	# route. Legacy zero-pause patrols retain their immediate return behavior.
+	_patrol_pause_remaining = patrol_pause_sec
 	_has_requested_encounter = false
 	_encounter_join_closed = false
 	_encounter_contact_valid = false
@@ -1127,6 +1176,7 @@ func _begin_last_known_search() -> void:
 # --- Boss --------------------------------------------------------------------
 
 func _on_boss_trigger_entered(body: Node3D) -> void:
+	if ExplorationState.is_suspended(): return
 	if _state != State.BOSS_IDLE:
 		return
 	if not body.is_in_group("player"):
@@ -1311,7 +1361,7 @@ func is_encounter_still_viable(player: Node3D, tolerance_m: float) -> bool:
 	return _encounter_contact_valid or global_position.distance_to(player.global_position) <= CombatEncounterManager.combat_max_distance_m
 
 
-func abort_combat_approach() -> void:
+func abort_combat_approach(total_approach_cancelled: bool = false) -> void:
 	# Separa definitivamente el estado exclusivo de positioning de la IA de
 	# exploración. NO borra LAST KNOWN ni contacto: ambos siguen siendo datos
 	# sensoriales válidos de este Enemy.
@@ -1322,6 +1372,7 @@ func abort_combat_approach() -> void:
 	_encounter_owns_enemy = false
 	_excluded_from_active_encounter = CombatEncounterManager.is_encounter_active()
 	_must_lose_contact_before_reentry = true
+	_cancelled_approach_reentry_pending = total_approach_cancelled
 	_has_requested_encounter = false
 	_encounter_join_closed = _excluded_from_active_encounter
 	_encounter_debug_state = "DROPPED"
