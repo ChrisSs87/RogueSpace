@@ -8,10 +8,13 @@
 [ext_resource type="Resource" path="res://resources/run/test_content_profiles/VarkhemEncounterV1.tres" id="6_runtime_profile"]
 [ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_encounter_room.tres" id="7_encounter_room"]
 [ext_resource type="Script" path="res://resources/run/DungeonBranchRuleResource.gd" id="8_branch_rule"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_guard_corridor.tres" id="12_patrol_corridor"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_guard_access.tres" id="13_patrol_access"]
 
 [sub_resource type="Resource" id="Resource_ch236"]
 script = ExtResource("4_11mur")
 stable_id = &"base_corridor"
+content_slots = [ExtResource("12_patrol_corridor")]
 tags = Array[StringName]([&"TRANSIT"])
 roles = Array[StringName]([&"CORRIDOR"])
 footprint_size = Vector2(14, 5)
@@ -20,6 +23,7 @@ connector_sides = Array[StringName]([&"west", &"east"])
 [sub_resource type="Resource" id="Resource_distribution_corridor"]
 script = ExtResource("4_11mur")
 stable_id = &"base_distributor_corridor"
+content_slots = [ExtResource("13_patrol_access")]
 tags = Array[StringName]([&"TRANSIT", &"DISTRIBUTION"])
 roles = Array[StringName]([&"CORRIDOR"])
 footprint_size = Vector2(14, 6)

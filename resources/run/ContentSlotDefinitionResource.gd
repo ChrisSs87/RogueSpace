@@ -10,4 +10,7 @@ class_name ContentSlotDefinitionResource
 @export var tags: Array[StringName] = []
 @export var enabled := true
 @export var allows_multiple_occupants := false
+## Optional atomic selection group within this module (e.g. two hub guards).
+@export var selection_group: StringName
+@export var patrol: ContentPatrolResource
 @export_range(0.0, 8.0, 0.1) var connector_clearance_m := 1.2

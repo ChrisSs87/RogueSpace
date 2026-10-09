@@ -10,6 +10,8 @@
 [ext_resource type="Resource" path="res://resources/run/test_templates/TestVarkhemLateWing.tres" id="9_late_wing"]
 [ext_resource type="Resource" path="res://resources/run/test_templates/TestVarkhemSpreadWings.tres" id="10_spread"]
 [ext_resource type="PackedScene" path="res://scenes/world/VarkhemCommandPresentation.tscn" id="11_command_visual"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_guard_hub_a.tres" id="12_guard_a"]
+[ext_resource type="Resource" path="res://resources/run/test_content_slots/varkhem_guard_hub_b.tres" id="13_guard_b"]
 
 [sub_resource type="Resource" id="Small"]
 script = ExtResource("4")
@@ -36,6 +38,7 @@ role_max_counts = {"CORRIDOR": 10, "ROOM": 0, "JUNCTION": 4}
 [sub_resource type="Resource" id="CentralHubPhysical"]
 script = ExtResource("7")
 stable_id = &"base_central_hub_large"
+content_slots = [ExtResource("12_guard_a"), ExtResource("13_guard_b")]
 roles = [&"JUNCTION"]
 tags = [&"HUB", &"TRANSIT", &"LARGE"]
 footprint_size = Vector2(16, 16)

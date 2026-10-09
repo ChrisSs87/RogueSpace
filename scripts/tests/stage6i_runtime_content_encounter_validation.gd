@@ -83,18 +83,25 @@ func _capture_current_sector(dungeon: Node3D, verify_duplicate: bool) -> Diction
 		var node_counts: Dictionary = {}
 		for slot in plan.selected_slots:
 			node_counts[slot.node_id] = int(node_counts.get(slot.node_id, 0)) + 1
-			if int(node_counts[slot.node_id]) > 1:
+			if int(node_counts[slot.node_id]) > dungeon.current_content_profile.max_slots_per_node:
 				enemy_valid = false
 		var signature_parts: Array[String] = []
 		for enemy in enemies:
-			enemy_valid = enemy_valid and enemy.enemy_resource != null and not enemy.enemy_resource.can_patrol
-			enemy_valid = enemy_valid and enemy._state == Enemy.State.IDLE
+			if dungeon.current_content_profile.procedural_patrols:
+				enemy_valid = enemy_valid and enemy.enemy_resource != null and enemy.enemy_resource.can_patrol and enemy.patrol_points.size() >= 2
+				enemy_valid = enemy_valid and enemy._state == Enemy.State.PATROL
+			else:
+				enemy_valid = enemy_valid and enemy.enemy_resource != null and not enemy.enemy_resource.can_patrol
+				enemy_valid = enemy_valid and enemy._state == Enemy.State.IDLE
 			enemy_valid = enemy_valid and enemy.has_method("begin_combat_approach") and enemy.has_method("refresh_encounter_contact_valid")
-			signature_parts.append("%s:%s:%s" % [enemy.get_meta("content_slot_id", &""), enemy.get_meta("content_source_resource_path", ""), enemy.global_transform])
+		for spawn in runtime_report.spawned:
+			signature_parts.append("%s:%s:%s" % [spawn.slot_id, spawn.resource_path, spawn.transform])
+		for route in runtime_report.patrol_routes:
+			signature_parts.append("%s:%s:%s" % [route.slot,route.kind,route.points])
 		signature_parts.sort()
 		var nav_valid: bool = not runtime_report.has("navigation_rejected")
 		result = {
-			"valid": all_encounters and enemy_valid and duplicate_safe and nav_valid and runtime_report.patrol_procedural_gap.size() == enemies.size(),
+			"valid": all_encounters and enemy_valid and duplicate_safe and nav_valid and (runtime_report.patrol_routes.size() == enemies.size() if dungeon.current_content_profile.procedural_patrols else runtime_report.patrol_procedural_gap.size() == enemies.size()),
 			"plan_signature": plan.get_signature(),
 			"runtime_signature": "|".join(signature_parts),
 			"selected": plan.selected_slots.size(),

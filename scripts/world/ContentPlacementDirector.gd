@@ -35,6 +35,12 @@ static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, p
 	var rng := RandomNumberGenerator.new()
 	rng.seed = placement_seed + int(profile.stable_id.hash())
 	var desired := rng.randi_range(profile.min_slots, profile.max_slots) if profile.max_slots >= profile.min_slots else profile.min_slots
+	if not profile.budget_capacity_tag.is_empty():
+		var capacity := candidates.filter(func(slot: DungeonContentSlot): return slot.tags.has(profile.budget_capacity_tag)).size()
+		desired = mini(desired, capacity)
+	if not profile.priority_slot_tags.is_empty():
+		_select_grouped(result, candidates, profile, rng, desired)
+		return result
 	while result.selected_slots.size() < desired and not candidates.is_empty():
 		var selected_index := _weighted_slot_index(candidates, profile, rng)
 		if selected_index < 0:
@@ -54,6 +60,41 @@ static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, p
 			if node_count >= profile.max_slots_per_node:
 				candidates = candidates.filter(func(other: DungeonContentSlot) -> bool: return other.node_id != slot.node_id)
 	return result
+
+
+static func _select_grouped(result: ContentPlacementPlan, candidates: Array[DungeonContentSlot], profile: ContentPlacementProfileResource, rng: RandomNumberGenerator, desired: int) -> void:
+	var groups: Array = []
+	var keys := {}
+	for slot in candidates:
+		var group: StringName = slot.definition.selection_group
+		var key := String(slot.unique_id) if group.is_empty() else "%s:%s" % [slot.node_id, group]
+		if not keys.has(key):
+			keys[key] = groups.size()
+			groups.append([])
+		groups[keys[key]].append(slot)
+	var priorities := profile.priority_slot_tags.duplicate()
+	while result.selected_slots.size() < desired:
+		var eligible: Array = []
+		var tag: StringName = priorities.pop_front() if not priorities.is_empty() else &""
+		for group in groups:
+			if group.size() > desired - result.selected_slots.size(): continue
+			var first: DungeonContentSlot = group[0]
+			if not tag.is_empty() and not first.tags.has(tag): continue
+			var already := 0
+			for slot in result.selected_slots:
+				if slot.node_id == first.node_id: already += 1
+			if profile.max_slots_per_node > 0 and already + group.size() > profile.max_slots_per_node: continue
+			eligible.append(group)
+		if eligible.is_empty():
+			if not tag.is_empty():
+				result.generation_error = "no slot group for required coverage %s" % tag
+			return
+		var selected: Array = eligible[rng.randi_range(0, eligible.size()-1)]
+		groups.erase(selected)
+		for slot: DungeonContentSlot in selected:
+			slot.occupied = true
+			slot.occupant_id = StringName("reserved:%s" % profile.stable_id)
+			result.selected_slots.append(slot)
 
 
 static func _eligible_slots(plan: DungeonPlan, profile: ContentPlacementProfileResource, slots: Array[DungeonContentSlot]) -> Array[DungeonContentSlot]:

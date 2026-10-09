@@ -228,6 +228,8 @@ func _regenerate_current_sector() -> void:
 	nav_ready = await _await_navigation_ready()
 	nav_sync_state = "OK" if nav_ready else "FAIL"
 	if nav_ready:
+		if current_content_profile != null and current_content_profile.procedural_patrols:
+			_rebuild_runtime_content(current_content_profile)
 		_validate_runtime_content_navigation()
 	_reposition_player()
 	_update_debug()
@@ -1317,7 +1319,9 @@ func _rebuild_content_placement() -> void:
 		marker.set_meta("content_slot_id", slot.unique_id)
 		marker.set_meta("category", slot.category)
 		root.add_child(marker)
-	_rebuild_runtime_content(profile)
+	if not profile.procedural_patrols or nav_ready:
+		_rebuild_runtime_content(profile)
+		if nav_ready: _validate_runtime_content_navigation()
 
 
 func _active_content_profile() -> ContentPlacementProfileResource:
@@ -1332,7 +1336,8 @@ func _rebuild_runtime_content(profile: ContentPlacementProfileResource) -> void:
 	var root := Node3D.new()
 	root.name = "RuntimeContent"
 	add_child(root)
-	current_runtime_content_report = CONTENT_RUNTIME_CONSUMER.consume(current_content_plan, profile, root)
+	var navigation_map := nav_region.get_navigation_map() if nav_region != null else RID()
+	current_runtime_content_report = CONTENT_RUNTIME_CONSUMER.consume(current_content_plan, profile, root, current_plan, navigation_map)
 
 
 func _validate_runtime_content_navigation() -> void:

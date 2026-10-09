@@ -1,0 +1,18 @@
+[gd_resource type="Resource" load_steps=4 format=3]
+[ext_resource type="Script" path="res://resources/run/ContentSlotDefinitionResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/ContentPatrolResource.gd" id="2"]
+[sub_resource type="Resource" id="Route"]
+script = ExtResource("2")
+stable_id = &"HUB"
+footprint_points = Array[Vector2]([Vector2(-0.22,-0.22), Vector2(0.22,-0.22)])
+pause_sec = 1.5
+turn_speed_deg = 100.0
+[resource]
+script = ExtResource("1")
+stable_id = &"varkhem_guard_hub_a"
+category = &"ENCOUNTER"
+local_position = Vector3(-3.52, 0.9, -3.52)
+tags = [&"VARKHEM", &"COMBAT", &"CIRCULATION"]
+selection_group = &"hub_pair"
+patrol = SubResource("Route")
+connector_clearance_m = 1.2

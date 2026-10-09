@@ -14,6 +14,13 @@ class_name ContentPlacementProfileResource
 @export var exclude_start := true
 @export var exclude_exit := true
 @export var max_slots_per_node := 1
+## Opt-in coverage, in order. Atomic groups must fit the existing slot budget.
+## Empty retains legacy selection byte-for-byte.
+@export var priority_slot_tags: Array[StringName] = []
+@export var procedural_patrols := false
+## Optional budget-capacity reference during redistribution. Keeps the count
+## that the previous tagged slot set could supply, without selecting only it.
+@export var budget_capacity_tag: StringName
 ## Pools de payload runtime por categoria. Content Placement sigue eligiendo
 ## slots sin conocer su contenido; cada consumidor decide que categorias sabe
 ## materializar. El default vacio preserva perfiles y harnesses existentes.

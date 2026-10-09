@@ -7,13 +7,15 @@ class_name ContentPlacementRuntimeConsumer
 const ENEMY_SCENE := preload("res://scenes/enemies/Enemy.tscn")
 
 
-static func consume(plan: ContentPlacementPlan, profile: ContentPlacementProfileResource, spawn_root: Node3D) -> Dictionary:
+static func consume(plan: ContentPlacementPlan, profile: ContentPlacementProfileResource, spawn_root: Node3D, dungeon_plan: DungeonPlan = null, navigation_map: RID = RID()) -> Dictionary:
 	var report: Dictionary = {
 		"spawned": [],
 		"duplicates": [],
 		"unsupported": [],
 		"invalid_payloads": [],
 		"patrol_procedural_gap": [],
+		"patrol_routes": [],
+		"patrol_rejected": [],
 		"size_classification": &"SIZE_CLASSIFICATION_NOT_AVAILABLE",
 	}
 	if plan == null or profile == null or spawn_root == null or not plan.is_valid():
@@ -45,8 +47,15 @@ static func consume(plan: ContentPlacementPlan, profile: ContentPlacementProfile
 			report.invalid_payloads.append(String(slot.unique_id))
 			continue
 		enemy.name = "Encounter_%s" % String(slot.unique_id).replace(":", "_")
+		var route := {}
+		if profile.procedural_patrols:
+			route = ContentPatrolRoutes.build(slot, dungeon_plan, spawn_root, navigation_map, enemy.get_node("CollisionShape3D").shape)
+			if route.has("error"):
+				report.patrol_rejected.append({"slot":slot.unique_id,"reason":route.error})
+				enemy.free()
+				continue
 		var runtime_resource := resource
-		if resource.can_patrol and profile.fallback_to_idle_without_patrol_points:
+		if resource.can_patrol and profile.fallback_to_idle_without_patrol_points and route.is_empty():
 			## Enemy.gd interpreta patrol_points como NodePath authored. Al no
 			## existir esa declaracion en DungeonContentSlot, no fabricamos rutas
 			## ni Markers; conservamos la IA existente en IDLE y lo hacemos visible.
@@ -59,7 +68,25 @@ static func consume(plan: ContentPlacementPlan, profile: ContentPlacementProfile
 		enemy.set_meta("content_category", slot.category)
 		enemy.set_meta("content_payload_id", entry.stable_id)
 		enemy.set_meta("content_source_resource_path", resource.resource_path)
+		if not route.is_empty():
+			enemy.patrol_pause_sec = route.spec.pause_sec
+			enemy.patrol_turn_speed_deg = route.spec.turn_speed_deg
+			for index in route.points.size():
+				var marker := Marker3D.new()
+				marker.name = "Patrol%d" % index
+				marker.top_level = true
+				enemy.add_child(marker)
+				enemy.patrol_points.append(NodePath(marker.name))
+			enemy.set_meta("patrol_kind", route.spec.stable_id)
+			enemy.set_meta("patrol_world_points", route.points)
 		spawn_root.add_child(enemy)
+		if not route.is_empty():
+			for index in route.points.size():
+				enemy.get_node(NodePath("Patrol%d" % index)).global_position = route.points[index]
+			var facing: Vector3 = route.points[0]
+			if enemy.global_position.distance_to(facing) < 0.1: facing = route.points[1]
+			enemy.look_at(facing, Vector3.UP)
+			report.patrol_routes.append({"slot":slot.unique_id,"kind":route.spec.stable_id,"points":route.points})
 		report.spawned.append({
 			"slot_id": slot.unique_id,
 			"category": slot.category,

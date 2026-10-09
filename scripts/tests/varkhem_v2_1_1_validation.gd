@@ -113,7 +113,7 @@ func _additional_physical_errors(dungeon: Node3D) -> Array:
 
 
 func _inspection_smoke() -> void:
-	var stage = load("res://scenes/tests/VarkhemV211ExperienceTest.tscn").instantiate()
+	var stage = load(_inspection_scene_path()).instantiate()
 	stage.initial_seed = 65002
 	add_child(stage)
 	await _await_sector(stage)
@@ -161,6 +161,7 @@ func _inspection_smoke() -> void:
 	await _await_sector(stage)
 	await get_tree().process_frame
 	valid = valid and stage.seed == 65004 and stage.nav_ready and not player.is_frozen and CombatManager.get_combatant_count() == 0 and not CombatEncounterManager.is_encounter_active() and not is_instance_valid(enemy)
+	valid = valid and _additional_inspection_check(stage)
 	print("V211_INSPECTION_SMOKE=%s" % valid)
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		inspector.top_view()
@@ -188,6 +189,14 @@ func _inspection_smoke() -> void:
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_png(_capture_path("command_room.png"))
 	get_tree().quit(0 if valid else 1)
+
+
+func _inspection_scene_path() -> String:
+	return "res://scenes/tests/VarkhemV211ExperienceTest.tscn"
+
+
+func _additional_inspection_check(_stage: Node3D) -> bool:
+	return true
 
 
 func _capture_path(filename: String) -> String:

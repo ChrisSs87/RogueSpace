@@ -321,6 +321,10 @@ func _lose_combat() -> void:
 ## Llamado por CombatUI cuando el jugador toca "Reiniciar prueba" en la
 ## pantalla de derrota, antes de recargar la escena.
 func reset_after_defeat() -> void:
+	# Also used by in-place procedural regeneration. Defeat retains its
+	# combatants, even though _in_combat is already false. Notify UI once;
+	# an idle reset (including after victory) must not close combat twice.
+	var had_combat: bool = _in_combat or not _combatants.is_empty()
 	_in_combat = false
 	_player = null
 	_combatants.clear()
@@ -329,6 +333,8 @@ func reset_after_defeat() -> void:
 	RunState.effects.clear_combat_effects()
 	_ambush_bonus_pending = false
 	_ambush_enemy = null
+	if had_combat:
+		combat_ended.emit()
 
 func get_debug_player_poisoned() -> bool:
 	return RunState.effects.has_effect(&"poison")

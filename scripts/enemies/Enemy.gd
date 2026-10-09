@@ -38,6 +38,10 @@ const AMBUSH_ZONE_DISTANCE_M: float = 1.0
 ## Puntos de patrulla, definidos a mano en la escena (Marker3D). Se ignoran
 ## si el EnemyResource tiene can_patrol = false.
 @export var patrol_points: Array[NodePath] = []
+## Optional patrol presentation. Zero defaults preserve authored/legacy patrol.
+@export var patrol_pause_sec := 0.0
+@export var patrol_turn_speed_deg := 0.0
+var _patrol_pause_remaining := 0.0
 ## Color placeholder para diferenciar especies a simple vista mientras no
 ## hay arte definitivo (Sección 3: la diferencia visual llega después).
 @export var debug_color: Color = Color(0.6, 0.6, 0.6)
@@ -289,6 +293,17 @@ func _process_patrol(delta: float) -> void:
 		return
 
 	var target: Node3D = _patrol_targets[_patrol_index]
+	if _patrol_pause_remaining > 0.0:
+		_patrol_pause_remaining = maxf(0.0, _patrol_pause_remaining - delta)
+		velocity.x = 0.0
+		velocity.z = 0.0
+		_debug_requested_speed_mps = 0.0
+		_debug_patrol_target_distance_m = 0.0
+		var heading := target.global_position - global_position
+		heading.y = 0.0
+		if heading.length_squared() > 0.001 and patrol_turn_speed_deg > 0.0:
+			_patrol_turn(heading, delta)
+		return
 	_debug_patrol_target_str = "%d -> %s" % [_patrol_index, target.name]
 	var flat_target_delta := target.global_position - global_position
 	flat_target_delta.y = 0.0
@@ -300,6 +315,7 @@ func _process_patrol(delta: float) -> void:
 	if reached:
 		_nav_failure_elapsed = 0.0
 		_advance_patrol_index()
+		_patrol_pause_remaining = patrol_pause_sec
 	elif _debug_nav_str == "NO PATH":
 		_nav_failure_elapsed += delta
 		# Recuperación acotada: el mapa puede estar sincronizándose al inicio
@@ -320,6 +336,12 @@ func _advance_patrol_index() -> void:
 	elif _patrol_index < 0:
 		_patrol_index = 1
 		_patrol_direction = 1
+
+
+func _patrol_turn(heading: Vector3, delta: float) -> void:
+	var yaw := atan2(-heading.x, -heading.z)
+	rotation.y = rotate_toward(rotation.y, yaw, deg_to_rad(patrol_turn_speed_deg) * delta)
+	_debug_rotation_owner = "PATROL TURN"
 
 
 ## Mueve al enemigo en línea recta hacia target_pos, deteniéndose a
@@ -471,7 +493,10 @@ func _update_actual_motion_debug(position_before_move: Vector3, delta: float) ->
 		# físico que move_and_slide realmente consiguió. El waypoint sólo decide
 		# velocidad; nunca puede alternar el FOV si el cuerpo no se desplazó.
 		if not _encounter_owns_enemy and not _searching_at_last_known:
-			look_at(global_position + _debug_physical_heading, Vector3.UP)
+			if _state == State.PATROL and patrol_turn_speed_deg > 0.0:
+				_patrol_turn(_debug_physical_heading, delta)
+			else:
+				look_at(global_position + _debug_physical_heading, Vector3.UP)
 			_debug_rotation_owner = "EXPLORATION PHYSICAL"
 
 	if _state != State.PATROL:
@@ -602,6 +627,7 @@ func _clear_stuck_recovery() -> void:
 func get_patrol_runtime_debug() -> Dictionary:
 	return {
 		"patrol_index": _patrol_index,
+		"pause_remaining_sec": _patrol_pause_remaining,
 		"patrol_target": _debug_patrol_target_str,
 		"target_distance_m": _debug_patrol_target_distance_m,
 		"requested_speed_mps": _debug_requested_speed_mps,
