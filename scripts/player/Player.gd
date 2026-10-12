@@ -47,6 +47,13 @@ enum MovementState { WALK, RUN, STEALTH }
 @export var mouse_sensitivity: float = 0.003
 @export var touch_look_sensitivity: float = 0.006
 @export var pitch_limit_deg: float = 85.0
+@export var crouched_height_m: float = 1.10
+@export var posture_camera_speed_mps: float = 2.0
+var _crouched := false
+var _standing_height := 1.70
+var _standing_head_y := 0.60
+var _standing_shape_position := Vector3.ZERO
+@onready var body_shape: CollisionShape3D = $CollisionShape3D
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
@@ -69,6 +76,12 @@ var _noise_event_elapsed_sec: float = 0.0
 
 
 func _ready() -> void:
+	# Each player owns its capsule; changing posture must not mutate Resources
+	# shared by another instance. Body origin/feet and camera rotation stay fixed.
+	body_shape.shape = body_shape.shape.duplicate()
+	_standing_height = (body_shape.shape as CapsuleShape3D).height
+	_standing_shape_position = body_shape.position
+	_standing_head_y = head.position.y
 	# El grupo "player" es cómo los enemigos encuentran al jugador sin que
 	# este script necesite conocerlos a ellos (desacople, ver Enemy.gd).
 	add_to_group("player")
@@ -169,6 +182,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 
 	_update_movement_state()
+	_update_posture(delta)
 
 	# Lee el input de movimiento (WASD, definido en el mapa de Input del proyecto)
 	# y lo convierte en una dirección relativa a hacia dónde mira el CUERPO
@@ -244,6 +258,34 @@ func _current_speed_tier() -> int:
 			return stealth_speed_tier
 		_:
 			return walk_speed_tier
+
+
+func is_crouched() -> bool:
+	return _crouched
+
+
+func _update_posture(delta: float) -> void:
+	var desired := movement_state == MovementState.STEALTH
+	if not desired and _crouched:
+		var query := PhysicsShapeQueryParameters3D.new()
+		var standing := (body_shape.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
+		standing.height = _standing_height
+		query.shape = standing
+		query.transform = global_transform * Transform3D(Basis.IDENTITY, _standing_shape_position)
+		query.collision_mask = collision_mask
+		query.exclude = [get_rid()]
+		# Exact capsule clearance: an inflated query would include the floor
+		# across CharacterBody's normal resting separation (0.0002 m here).
+		query.margin = 0.0
+		if not get_world_3d().direct_space_state.intersect_shape(query).is_empty():
+			desired = true
+			movement_state = MovementState.STEALTH
+	_crouched = desired
+	var height := maxf(crouched_height_m, (body_shape.shape as CapsuleShape3D).radius * 2.0) if _crouched else _standing_height
+	(body_shape.shape as CapsuleShape3D).height = height
+	body_shape.position = _standing_shape_position + Vector3.DOWN * ((_standing_height-height)*0.5)
+	var target_y := _standing_head_y - (_standing_height-height)
+	head.position.y = move_toward(head.position.y, target_y, posture_camera_speed_mps * delta)
 
 
 func get_current_speed_mps() -> float:

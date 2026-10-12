@@ -65,6 +65,9 @@ var _last_known_player_position: Vector3 = Vector3.ZERO
 var _last_known_source: String = "NONE"
 var _last_heard_noise_time_msec: int = -1000000
 var _searching_at_last_known: bool = false
+var _alert_search_points: Array[Vector3] = []
+var _alert_search_index := 0
+var _alert_search_pause := 0.0
 var _time_since_detection: float = 0.0
 var _has_requested_encounter: bool = false
 var _encounter_join_closed: bool = false
@@ -108,6 +111,7 @@ var _sight_timer: float = 0.0
 var _debug_dist_str: String = "N/A"
 var _debug_fov_str: String = "N/A"
 var _debug_los_str: String = "N/A"
+var _debug_cover_str: String = "N/A"
 var _debug_light_str: String = "N/A"
 var _debug_sight_str: String = "N/A"
 var _debug_capability_str: String = "N/A"
@@ -262,8 +266,7 @@ func _physics_process(delta: float) -> void:
 				if reached_alert_target or _debug_nav_str == "NO PATH":
 					_begin_last_known_search()
 			else:
-				velocity.x = 0.0
-				velocity.z = 0.0
+				_process_local_search(delta)
 		State.CHASE:
 			_process_chase(delta)
 		State.APPROACH:
@@ -511,7 +514,7 @@ func _update_actual_motion_debug(position_before_move: Vector3, delta: float) ->
 		# Exploración tiene una única autoridad de orientación: el movimiento
 		# físico que move_and_slide realmente consiguió. El waypoint sólo decide
 		# velocidad; nunca puede alternar el FOV si el cuerpo no se desplazó.
-		if not _encounter_owns_enemy and not _searching_at_last_known:
+		if not _encounter_owns_enemy and (not _searching_at_last_known or (_alert_search_index < _alert_search_points.size() and _alert_search_pause <= 0.0)):
 			if _state == State.PATROL and patrol_turn_speed_deg > 0.0:
 				_patrol_turn(_debug_physical_heading, delta)
 			else:
@@ -782,6 +785,7 @@ func get_debug_fov_color() -> Color:
 ## propio dato de debug en N/A si no llegó a evaluarse (nunca inventa ni
 ## arrastra un valor viejo).
 func _passes_vision_baseline(player: Node3D) -> bool:
+	_debug_cover_str = "N/A"
 	var eye_pos := get_vision_origin()
 	var head := player.get_node_or_null("Head") as Node3D
 	var target_pos: Vector3 = head.global_position if head != null else player.global_position
@@ -809,7 +813,7 @@ func _passes_vision_baseline(player: Node3D) -> bool:
 	# Una pared (o una puerta cerrada, el día que existan puertas como
 	# geometría real) bloquea la visión: si el rayo choca contra algo antes
 	# de llegar al jugador, no hay línea de visión.
-	var has_los: bool = _has_clear_line(eye_pos, target_pos)
+	var has_los: bool = _has_clear_vision_line(eye_pos, target_pos, player)
 	_debug_los_str = "YES" if has_los else "NO"
 	return has_los
 
@@ -821,6 +825,28 @@ func get_vision_origin() -> Vector3:
 	if capsule != null:
 		return collision_shape.global_transform * Vector3(0,capsule.height*0.5-capsule.radius,0)
 	return global_position
+
+
+func _has_clear_vision_line(from: Vector3, to: Vector3, player: Node3D) -> bool:
+	var ignored: Array[RID] = [get_rid()]
+	var crouched: bool = player.has_method("is_crouched") and player.is_crouched()
+	_debug_cover_str = "NONE"
+	for cover: LogicalCover in get_tree().get_nodes_in_group("logical_cover"):
+		if cover.blocks_sight(from, to, crouched):
+			_debug_cover_str = "%s:BLOCK" % LogicalCover.Category.keys()[cover.category]
+			return false
+		# Tagged props use their declared gameplay volume, not visual height.
+		# Only this vision query ignores their body; movement/combat do not.
+		ignored.append(cover.get_rid())
+		if cover.interposes(from, to):
+			_debug_cover_str = "%s:PASS" % LogicalCover.Category.keys()[cover.category]
+	var query := PhysicsRayQueryParameters3D.create(from, to, WORLD_COLLISION_MASK, ignored)
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+func get_cover_perception_debug() -> Dictionary:
+	var player := get_tree().get_first_node_in_group("player")
+	return {"state":get_debug_state_name(),"distance":_debug_dist_str,"fov":_debug_fov_str,"los":_debug_los_str,"cover":_debug_cover_str,"posture":"CROUCH" if player != null and player.has_method("is_crouched") and player.is_crouched() else "STAND","search_points":_alert_search_points.duplicate(),"search_index":_alert_search_index}
 
 
 ## Capacidad de detección (0.0-1.0) según la tabla configurable del
@@ -893,6 +919,7 @@ func _has_clear_line(from_pos: Vector3, to_pos: Vector3) -> bool:
 ## observación visual incompleta siempre queda en ALERT: noise_response_mode
 ## solo se consulta en _on_player_heard().
 func _on_player_seen(position: Vector3, is_confirmed: bool) -> void:
+	_alert_search_points.clear()
 	_last_known_player_position = position
 	_last_known_source = "VISION"
 	_searching_at_last_known = false
@@ -913,6 +940,7 @@ func _on_player_seen(position: Vector3, is_confirmed: bool) -> void:
 
 ## El modo de respuesta se aplica exclusivamente a un ruido confirmado.
 func _on_player_heard(position: Vector3) -> void:
+	_alert_search_points.clear()
 	_last_known_player_position = position
 	_last_known_source = "SOUND"
 	_searching_at_last_known = false
@@ -1137,6 +1165,7 @@ func _check_lose_target_timeout() -> void:
 	_has_requested_encounter = false
 	_encounter_join_closed = false
 	_encounter_contact_valid = false
+	_alert_search_points.clear()
 
 
 ## CHASE significa que el enemigo tiene percepción actual; al perderla,
@@ -1171,6 +1200,69 @@ func _begin_last_known_search() -> void:
 	_time_since_detection = 0.0
 	_has_requested_encounter = false
 	_encounter_contact_valid = false
+	_alert_search_index = 0
+	_alert_search_pause = enemy_resource.alert_search_pause_sec
+	_alert_search_points = _build_local_search_points()
+
+
+func _build_local_search_points() -> Array[Vector3]:
+	var points: Array[Vector3] = []
+	var count := clampi(enemy_resource.alert_search_point_count, 0, 2)
+	if count == 0 or enemy_resource.alert_search_radius_m <= 0.0:
+		return points
+	var map := get_world_3d().get_navigation_map()
+	if NavigationServer3D.map_get_iteration_id(map) == 0:
+		return points
+	var start := NavigationServer3D.map_get_closest_point(map, global_position)
+	var floor_offset := global_position.y - start.y
+	var heading := -global_basis.z
+	heading.y = 0.0
+	heading = heading.normalized()
+	# Fixed, mirrored order, bounded to eight probes. Resource controls radius
+	# and count. No RNG, no target-player query, no placement committed here.
+	for angle in [60.0, -60.0, 120.0, -120.0, 0.0, 180.0, 90.0, -90.0]:
+		var requested := _last_known_player_position + heading.rotated(Vector3.UP, deg_to_rad(angle)) * enemy_resource.alert_search_radius_m
+		var projected := NavigationServer3D.map_get_closest_point(map, requested)
+		if Vector2(projected.x-requested.x, projected.z-requested.z).length() > ARRIVE_THRESHOLD_M:
+			continue
+		var target := projected + Vector3.UP * floor_offset
+		if target.distance_to(global_position) <= ARRIVE_THRESHOLD_M or (not points.is_empty() and points[0].distance_to(target) <= ARRIVE_THRESHOLD_M):
+			continue
+		var path := NavigationServer3D.map_get_path(map, start, projected, true)
+		if path.size() < 2:
+			continue
+		var query := PhysicsShapeQueryParameters3D.new()
+		query.shape = collision_shape.shape
+		query.transform = collision_shape.global_transform
+		query.transform.origin += target-global_position
+		query.collision_mask = collision_mask
+		query.exclude = [get_rid()]
+		query.margin = 0.0
+		if not get_world_3d().direct_space_state.intersect_shape(query).is_empty():
+			continue
+		points.append(target)
+		if points.size() == count: break
+	return points
+
+
+func _process_local_search(delta: float) -> void:
+	velocity.x = 0.0
+	velocity.z = 0.0
+	_debug_requested_speed_mps = 0.0
+	if _alert_search_index >= _alert_search_points.size(): return
+	var target := _alert_search_points[_alert_search_index]
+	if _alert_search_pause > 0.0:
+		_alert_search_pause = maxf(0.0, _alert_search_pause-delta)
+		var heading := target-global_position
+		heading.y = 0.0
+		if heading.length_squared() > 0.001:
+			rotation.y = rotate_toward(rotation.y, atan2(-heading.x,-heading.z), deg_to_rad(enemy_resource.alert_search_turn_speed_deg)*delta)
+			_debug_rotation_owner = "ALERT INSPECTION"
+		return
+	_debug_requested_speed_mps = _current_speed_mps()
+	if _move_toward_point(target, _current_speed_mps(), delta) or _debug_nav_str == "NO PATH":
+		_alert_search_index += 1
+		_alert_search_pause = enemy_resource.alert_search_pause_sec
 
 
 # --- Boss --------------------------------------------------------------------
@@ -1415,6 +1507,7 @@ func _update_debug_label() -> void:
 	if DebugConfig.perception_debug_enabled and enemy_resource != null and not enemy_resource.is_boss:
 		text += "\nDIST: %s" % _debug_dist_str
 		text += "\nFOV: %s   LOS: %s" % [_debug_fov_str, _debug_los_str]
+		text += "\nCOVER: %s   POSTURE: %s" % [_debug_cover_str, get_cover_perception_debug().posture]
 		text += "\nPLAYER LIGHT: %s" % _debug_light_str
 		text += "\nSIGHT: %s" % _debug_sight_str
 		text += "\nCAPABILITY: %s" % _debug_capability_str

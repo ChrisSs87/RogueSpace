@@ -28,6 +28,12 @@ class_name EnemyResource
 ## Permite que una especie sea más persistente sin inventar la posición actual
 ## del jugador fuera de percepción.
 @export var lose_target_timeout_sec: float = 7.0
+## Opt-in bounded local search inside the existing ALERT timeout. Zero keeps
+## legacy species unchanged; probes are relative to last known, never Player.
+@export_range(0, 2, 1) var alert_search_point_count: int = 0
+@export var alert_search_radius_m: float = 1.5
+@export var alert_search_pause_sec: float = 0.4
+@export var alert_search_turn_speed_deg: float = 120.0
 
 @export_category("Velocidad (niveles 1-5, ver autoload GameBalance)")
 @export var patrol_speed_tier: int = 2

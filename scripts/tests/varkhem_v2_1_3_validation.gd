@@ -106,7 +106,9 @@ func _phase_a() -> void:
 			trace.append({"state":state,"position":enemy.global_position,"searching":enemy._searching_at_last_known,"last_known":enemy.get_debug_last_known_position()})
 			state_before = state
 		if state == "ALERT" and enemy._searching_at_last_known:
-			arrived = enemy.global_position.distance_to(last_known) <= 0.4
+			# Arrival is an observed event, not a requirement to remain parked:
+			# opt-in ALERT may subsequently inspect nearby navigable points.
+			arrived = arrived or enemy.global_position.distance_to(last_known) <= 0.4
 		if arrived and state == "PATROL":
 			returned = true
 			break
