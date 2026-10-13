@@ -48,13 +48,53 @@ var _step: String = STEP_DONE
 var _last_message: String = ""
 
 var _pending_unlocked_card: CardResource = null
+var _active := false
+var _closing := false
+var _sequence_id := 0
+var _player_exit_callback := Callable()
+var _last_close_result: Dictionary = {}
+
+
+func is_reward_active() -> bool:
+	return _active
+
+
+func get_sequence_id() -> int:
+	return _sequence_id
+
+
+## Readable during reward_sequence_finished (signature preserved).
+## kind is completed/cancelled; reason distinguishes the originating caller.
+func get_last_close_result() -> Dictionary:
+	return _last_close_result.duplicate()
+
+
+## Cancels pending choices only. Confirmed DNA/unlocks/cards/healing remain.
+## A captured sequence ID prevents a departing old owner from closing a new
+## sequence. Returns false for idle, repeated or stale cancellation.
+func abort_reward_sequence(reason: String = "cancelled", expected_sequence_id: int = -1) -> bool:
+	if expected_sequence_id >= 0 and expected_sequence_id != _sequence_id:
+		return false
+	return _close_sequence("cancelled", reason)
+
+
+func _on_reward_player_exiting(sequence_id: int) -> void:
+	abort_reward_sequence("player_exiting", sequence_id)
 
 
 ## Llamado por CombatManager al ganar un combate. defeated_species trae la
 ## especie de CADA enemigo derrotado (puede repetirse), ya con la mano
 ## descartada y el combate totalmente cerrado — nunca a mitad de combate.
 func start_reward_sequence(defeated_species: Array, player: Node3D) -> void:
+	# Do not overwrite an active transaction or reenter its terminal dispatch.
+	if _active or _closing or not is_instance_valid(player) or player.is_queued_for_deletion():
+		return
+	_sequence_id += 1
+	var starting_id := _sequence_id
+	_active = true
 	_player = player
+	_player_exit_callback = _on_reward_player_exiting.bind(starting_id)
+	_player.tree_exiting.connect(_player_exit_callback)
 	_pending_dna_species.clear()
 
 	for species_id in defeated_species:
@@ -65,14 +105,17 @@ func start_reward_sequence(defeated_species: Array, player: Node3D) -> void:
 
 	_kit_offer_pending = randf() < recovery_item_chance and RunState.player_health < RunState.max_player_health
 	_pending_unlocked_card = null
+	_step = STEP_SUMMARY
 
 	reward_sequence_started.emit()
+	# A started listener may cancel or destroy the owner synchronously.
+	if not _active or _sequence_id != starting_id:
+		return
 
 	if _pending_dna_species.is_empty() and not _kit_offer_pending:
 		_finish()
 		return
 
-	_step = STEP_SUMMARY
 	reward_step_changed.emit()
 
 
@@ -122,9 +165,15 @@ func choose_dna_slot(equipment_slot: String) -> void:
 	if _step != STEP_DNA_CHOICE or _pending_dna_species.is_empty():
 		return
 
+	var choosing_id := _sequence_id
 	var species_id: String = _pending_dna_species.pop_front()
 	var before: int = _get_equipment_stat(equipment_slot)
 	DNAManager.add_dna(equipment_slot, species_id, 1)
+	# DNA signals can synchronously reset the scene. Preserve the confirmed
+	# DNA/unlock rule, but never resurrect the cancelled transaction's UI.
+	var unlocked := DNAManager.check_and_unlock(equipment_slot, species_id)
+	if not _active or _sequence_id != choosing_id:
+		return
 	var after: int = _get_equipment_stat(equipment_slot)
 
 	_last_message = "%s aplicado en %s.\n%s: %d → %d" % [
@@ -135,7 +184,7 @@ func choose_dna_slot(equipment_slot: String) -> void:
 		after,
 	]
 
-	_pending_unlocked_card = DNAManager.check_and_unlock(equipment_slot, species_id)
+	_pending_unlocked_card = unlocked
 	_step = STEP_DNA_RESULT
 	reward_step_changed.emit()
 
@@ -219,7 +268,10 @@ func choose_card_to_replace(old_card: CardResource) -> void:
 func use_first_aid_kit() -> void:
 	if _step != STEP_KIT_OFFER:
 		return
+	var choosing_id := _sequence_id
 	RunState.heal(first_aid_kit_heal_amount)
+	if not _active or _sequence_id != choosing_id:
+		return
 	_last_message = "Kit de Primeros Auxilios usado.\nVida: %d/%d" % [RunState.player_health, RunState.max_player_health]
 	_step = STEP_KIT_RESULT
 	reward_step_changed.emit()
@@ -247,13 +299,35 @@ func _advance() -> void:
 
 
 func _finish() -> void:
-	_step = STEP_DONE
+	_close_sequence("completed", "completed")
+
+
+func _close_sequence(kind: String, reason: String) -> bool:
+	if not _active or _closing:
+		return false
+	_closing = true
+	_active = false
 	var player_ref: Node3D = _player
+	if is_instance_valid(player_ref) and _player_exit_callback.is_valid() and player_ref.tree_exiting.is_connected(_player_exit_callback):
+		player_ref.tree_exiting.disconnect(_player_exit_callback)
+	_player_exit_callback = Callable()
+	_step = STEP_DONE
+	_pending_dna_species.clear()
+	_pending_unlocked_card = null
+	_kit_offer_pending = false
+	_last_message = ""
 	_player = null
+	_last_close_result = {"sequence_id":_sequence_id,"kind":kind,"reason":reason}
+	# Existing UI and ExplorationState consumers close only the reward owner.
+	# State/refs are already terminal before any listener is notified.
 	reward_sequence_finished.emit()
 
-	if player_ref != null and player_ref.has_method("unfreeze_after_combat"):
+	# A listener may destroy Player or start combat. Never touch a freed body
+	# or release a freeze while another exploration suspension is still owned.
+	if is_instance_valid(player_ref) and player_ref.is_inside_tree() and not player_ref.is_queued_for_deletion() and not ExplorationState.is_suspended() and player_ref.has_method("unfreeze_after_combat"):
 		player_ref.unfreeze_after_combat()
+	_closing = false
+	return true
 
 
 func _get_equipment_stat(equipment_slot: String) -> int:

@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/tests/core_p1a_reward_diagnostic.gd" id="1"]
+[node name="P1ADiagnosticDriver" type="Node"]
+script = ExtResource("1")

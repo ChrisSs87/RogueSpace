@@ -41,6 +41,12 @@ const MAX_REPLACE_SLOTS: int = 10
 @onready var decline_kit_button: Button = $Root/KitOfferPanel/DeclineKitButton
 
 var _replace_slot_buttons: Array = []
+var _owned_sequence_id := 0
+
+
+func _exit_tree() -> void:
+	if _owned_sequence_id > 0:
+		RewardManager.abort_reward_sequence("reward_ui_exiting", _owned_sequence_id)
 
 
 func _ready() -> void:
@@ -77,10 +83,12 @@ func _hide_all_panels() -> void:
 
 
 func _on_sequence_started() -> void:
+	_owned_sequence_id = RewardManager.get_sequence_id()
 	visible = true
 
 
 func _on_sequence_finished() -> void:
+	_owned_sequence_id = 0
 	visible = false
 
 

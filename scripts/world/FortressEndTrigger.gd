@@ -36,5 +36,6 @@ func _activate() -> void:
 
 
 func restart_test() -> void:
+	RewardManager.abort_reward_sequence("well_restart")
 	RunState.reset_run()
 	get_tree().reload_current_scene()

@@ -118,6 +118,7 @@ func _on_reset_pressed() -> void:
 	if prototype != null and prototype.has_method("regenerate_from_debug"):
 		prototype.regenerate_from_debug()
 		return
+	RewardManager.abort_reward_sequence("debug_run_reset")
 	DNAManager.reset()
 	RunState.reset_run()
 	CombatManager.reset_after_defeat()

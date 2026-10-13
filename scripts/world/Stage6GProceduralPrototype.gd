@@ -1176,6 +1176,7 @@ func _clear_previous_assembly() -> void:
 ## Player a exploración. Los managers conservan ownership entre regeneraciones
 ## porque son autoloads; no pueden sobrevivir a sus participantes físicos.
 func _clear_runtime_combat_before_regeneration() -> void:
+	RewardManager.abort_reward_sequence("dungeon_regeneration")
 	if get_node_or_null("RuntimeContent") == null:
 		return
 	CombatEncounterManager.reset()

@@ -221,6 +221,7 @@ func _on_end_turn_pressed() -> void:
 
 
 func _on_restart_pressed() -> void:
+	RewardManager.abort_reward_sequence("combat_restart")
 	DNAManager.reset()
 	RunState.reset_run()
 	CombatManager.reset_after_defeat()
