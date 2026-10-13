@@ -688,7 +688,9 @@ func _on_perception_tick() -> void:
 
 	var vision_result: String = _evaluate_vision(player)
 	_last_vision_result = vision_result
-	var visual_contact := vision_result == VISION_CHASE or (vision_result == VISION_ALERT and not enemy_resource.visual_suspicion_enabled)
+	# Exposure confirmation is shared. Suspicion tuning must not implicitly
+	# admit an unconfirmed species to combat. Hearing remains its own channel.
+	var visual_contact := vision_result == VISION_CHASE
 	var heard_player: bool = not visual_contact and _has_recent_sound_contact()
 	_encounter_contact_valid = visual_contact or heard_player
 	_current_contact_kind = "VISION" if visual_contact else ("SOUND" if heard_player else ("VISUAL_SUSPICION" if vision_result == VISION_ALERT else "NONE"))
@@ -1032,6 +1034,8 @@ func _start_ambush_encounter(player: Node3D) -> void:
 
 
 func _is_ambush_valid(player: Node3D) -> bool:
+	if enemy_resource == null or not enemy_resource.allow_player_ambush:
+		return false
 	if player == null or not player.has_method("get_movement_state_label") or player.get_movement_state_label() != "STEALTH":
 		return false
 	if _current_contact_kind != "NONE" or _state not in [State.PATROL, State.IDLE, State.ALERT] or _has_requested_encounter or _encounter_join_closed or _excluded_from_active_encounter:
@@ -1077,11 +1081,10 @@ func refresh_encounter_contact_valid() -> bool:
 		return false
 
 	var has_visual_baseline: bool = _passes_vision_baseline(player)
-	var confirmed_visual := has_visual_baseline
-	if enemy_resource.visual_suspicion_enabled:
-		var capability := _get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
-		if _is_within_proximity_override(player): capability = 1.0
-		confirmed_visual = has_visual_baseline and _sight_timer >= enemy_resource.detection_time_sec and capability >= enemy_resource.visual_suspicion_min_capability
+	var capability := _get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
+	if _is_within_proximity_override(player): capability = 1.0
+	var minimum := enemy_resource.visual_suspicion_min_capability if enemy_resource.visual_suspicion_enabled else 0.0
+	var confirmed_visual := has_visual_baseline and _sight_timer >= enemy_resource.detection_time_sec and capability >= minimum
 	var has_hearing_contact: bool = not confirmed_visual and _has_recent_sound_contact()
 	_encounter_contact_valid = confirmed_visual or has_hearing_contact
 	return _encounter_contact_valid
@@ -1468,8 +1471,26 @@ func _finish_combat_approach() -> void:
 func is_combat_position_valid(player: Node3D, tolerance_m: float) -> bool:
 	if player == null or enemy_resource == null:
 		return false
-	var distance := global_position.distance_to(player.global_position)
-	return distance >= CombatEncounterManager.combat_min_distance_m and distance <= CombatEncounterManager.combat_max_distance_m
+	# A player-initiated, already validated ambush is not an enemy sensory
+	# acquisition. Ordinary encounters require fresh confirmed vision/SOUND.
+	var admitted_ambush := enemy_resource.allow_player_ambush and _ambush_candidate_registered
+	if not admitted_ambush and not refresh_encounter_contact_valid():
+		return false
+	var head := player.get_node_or_null("Head") as Node3D
+	var target := head.global_position if head != null else player.global_position
+	# Logical HIGH/MEDIUM cannot be bypassed by a short visual model or SOUND.
+	if not _has_clear_vision_line(get_vision_origin(),target,player):
+		return false
+	# Reuse the same band/physical clearance/projection/LOS validator as slots,
+	# instead of returning READY by distance before that validator can run.
+	if not _is_valid_combat_slot(global_position,player.global_position):
+		return false
+	var map := get_world_3d().get_navigation_map()
+	var from := NavigationServer3D.map_get_closest_point(map,global_position)
+	var to := NavigationServer3D.map_get_closest_point(map,player.global_position)
+	if Vector2(to.x-player.global_position.x,to.z-player.global_position.z).length() > 0.12:
+		return false
+	return NavigationServer3D.map_get_path(map,from,to,true).size() >= 2
 
 
 func is_encounter_still_viable(player: Node3D, tolerance_m: float) -> bool:

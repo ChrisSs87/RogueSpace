@@ -8,6 +8,56 @@ const HORVEX := preload("res://resources/enemies/xenomorfo.tres")
 var fortress: Node3D
 var player: Node3D
 var ready_count := 0
+const FIXTURE_ORIGIN := Vector3(-40, 0, 0)
+
+func _create_fixture() -> void:
+	# Test-owned supported space, separate from Fortress6A/W05. The production
+	# greybox stays unchanged; real bodies, navigation and perception still run.
+	var floor := CSGBox3D.new()
+	floor.size = Vector3(20, 0.2, 20)
+	floor.position = FIXTURE_ORIGIN + Vector3(0, -0.1, 0)
+	floor.use_collision = true
+	add_child(floor)
+	var region := NavigationRegion3D.new()
+	var mesh := NavigationMesh.new()
+	mesh.vertices = PackedVector3Array([Vector3(-9,0,-9),Vector3(-9,0,9),Vector3(9,0,9),Vector3(9,0,-9)])
+	mesh.add_polygon(PackedInt32Array([0,1,2,3]))
+	region.navigation_mesh = mesh
+	region.position = FIXTURE_ORIGIN
+	add_child(region)
+
+func _preflight(enemy: Enemy, require_vision: bool) -> bool:
+	# Reuse the original preparation bound. No stimulus/state is fabricated.
+	for _i in 180:
+		await get_tree().physics_frame
+		await get_tree().process_frame
+		var map := get_world_3d().get_navigation_map()
+		if NavigationServer3D.map_get_iteration_id(map) == 0: continue
+		var start := NavigationServer3D.map_get_closest_point(map, enemy.global_position)
+		var end := NavigationServer3D.map_get_closest_point(map, player.global_position)
+		var path := NavigationServer3D.map_get_path(map, start, end, true)
+		var projected := Vector2(start.x-enemy.global_position.x,start.z-enemy.global_position.z).length() < 0.12 and Vector2(end.x-player.global_position.x,end.z-player.global_position.z).length() < 0.12
+		var query := PhysicsShapeQueryParameters3D.new()
+		var capsule: CapsuleShape3D = player.get_node("CollisionShape3D").shape.duplicate()
+		# Interior capsule excludes the legitimate resting-floor contact only.
+		capsule.radius -= 0.01
+		capsule.height -= 0.02
+		query.shape = capsule
+		query.transform = player.get_node("CollisionShape3D").global_transform
+		query.collision_mask = player.collision_mask
+		query.exclude = [player.get_rid()]
+		var clear := get_world_3d().direct_space_state.intersect_shape(query).is_empty()
+		var target: Vector3 = player.get_node("Head").global_position
+		var delta := target-enemy.get_vision_origin()
+		delta.y = 0
+		var fov := rad_to_deg((-enemy.global_basis.z).angle_to(delta.normalized())) <= enemy.get_debug_fov_angle_deg()/2
+		var los := enemy._has_clear_vision_line(enemy.get_vision_origin(),target,player)
+		var in_range := delta.length() <= enemy.get_debug_fov_range_m()
+		if player.is_on_floor() and enemy.is_on_floor() and clear and projected and path.size() >= 2 and (not require_vision or (fov and los and in_range)):
+			print("6B NEGATIVE PREFLIGHT | case=%s floor=true capsule_clear=true path=%d FOV=%s LOS=%s range=%s" % [enemy.name,path.size(),fov,los,in_range])
+			return true
+	print("6B NEGATIVE FAIL_FIXTURE | case=%s player=%s enemy=%s player_floor=%s enemy_floor=%s" % [enemy.name,player.global_position,enemy.global_position,player.is_on_floor(),enemy.is_on_floor()])
+	return false
 
 func _ready() -> void:
 	var main: Node3D = $MainFortress6A
@@ -18,6 +68,7 @@ func _ready() -> void:
 		built_in.perception_timer.stop()
 		built_in.set_physics_process(false)
 	EventBus.ambush_ready.connect(func(_enemy, _player): ready_count += 1)
+	_create_fixture()
 	for _i in 60: await get_tree().physics_frame
 	var no_stealth := await _case_no_stealth()
 	var frontal := await _case_frontal_stealth()
@@ -39,13 +90,13 @@ func _spawn(name: String) -> Enemy:
 	# enters the tree; each negative case places it only after this frame.
 	Input.action_release("move_forward")
 	Input.action_release("stealth")
-	player.global_position = Vector3(0.0, 0.85, 0.0)
+	player.global_position = FIXTURE_ORIGIN + Vector3(-6.0, 0.85, 5.0)
 	player.velocity = Vector3.ZERO
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
 	enemy.name = name
 	enemy.enemy_resource = HORVEX
 	fortress.add_child(enemy)
-	enemy.global_position = Vector3(6.0, 1.0, 0.0)
+	enemy.global_position = FIXTURE_ORIGIN + Vector3(0.0, 1.0, 0.0)
 	enemy.rotation.y = 0.0
 	await get_tree().physics_frame
 	return enemy
@@ -66,6 +117,9 @@ func _case_no_stealth() -> bool:
 	var forward := -enemy.global_transform.basis.z.normalized()
 	player.global_position = enemy.global_position - forward * 1.45
 	player.look_at(player.global_position + forward, Vector3.UP)
+	if not await _preflight(enemy, false):
+		await _dispose(enemy)
+		return false
 	Input.action_press("move_forward")
 	for _i in 18: await get_tree().physics_frame
 	Input.action_release("move_forward")
@@ -78,8 +132,12 @@ func _case_no_stealth() -> bool:
 func _case_frontal_stealth() -> bool:
 	var enemy := await _spawn("FrontalStealth")
 	var forward := -enemy.global_transform.basis.z.normalized()
-	player.global_position = enemy.global_position + forward * 0.45
+	# Outside both real capsules, still unambiguously in front (not rear zone).
+	player.global_position = enemy.global_position + forward * 1.2
 	player.look_at(player.global_position - forward, Vector3.UP)
+	if not await _preflight(enemy, true):
+		await _dispose(enemy)
+		return false
 	Input.action_press("stealth")
 	for _i in 90: await get_tree().physics_frame
 	var result := not enemy.get_debug_ambush_candidate_registered()
@@ -90,20 +148,28 @@ func _case_frontal_stealth() -> bool:
 
 func _case_prior_contact() -> bool:
 	var enemy := await _spawn("PriorContact")
-	# This is the open InitialMelee room/lane used by the existing Fortress
-	# runtime vision tests. It gives the real stationary Horvex clear FOV/LOS.
-	enemy.global_position = Vector3(12.0, 1.0, -0.7)
-	await get_tree().physics_frame
 	var forward := -enemy.global_transform.basis.z.normalized()
-	# Deliberately acquire real VISION from the front.
-	player.global_position = enemy.global_position + forward * 1.0
+	# Allow full exposure before ALERT locomotion reaches the Player capsule.
+	# At 1 m the old setup triggers legitimate stuck recovery before the fifth
+	# visual tick, breaking FOV. Derive the run-up from the real Resource, not
+	# a guessed coordinate or an increased timeout. No AI state is held/forced.
+	var light := LightingManager.get_light_level_at(enemy.global_position)
+	var capability: float = HORVEX.light_detection_curve[light]
+	var exposure_time := HORVEX.detection_time_sec / maxf(capability, 0.01)
+	var initial_distance := GameBalance.get_speed(HORVEX.chase_speed_tier) * (exposure_time + HORVEX.perception_interval_sec) + 1.0
+	player.global_position = enemy.global_position + forward * initial_distance
 	player.look_at(player.global_position + forward, Vector3.UP)
+	if not await _preflight(enemy, true):
+		await _dispose(enemy)
+		return false
 	var vision_confirmed := false
 	for _i in 180:
 		await get_tree().physics_frame
 		if enemy._current_contact_kind == "VISION":
 			vision_confirmed = true
 			break
+		if _i % 10 == 0:
+			print("6B PRIOR_CONTACT_TRACE=" + JSON.stringify({"tick":_i,"player":player.global_position,"enemy":enemy.global_position,"forward":-enemy.global_basis.z,"floor":player.is_on_floor(),"enemy_floor":enemy.is_on_floor(),"state":enemy.get_debug_state_name(),"contact":enemy._current_contact_kind,"exposure":enemy._sight_timer,"perception":enemy.get_cover_perception_debug(),"suspended":ExplorationState.is_suspended()}))
 	if not vision_confirmed:
 		print("6B AMBUSH NEGATIVE prior_contact: TEST SETUP INVALID (no real VISION)")
 		await _dispose(enemy)
@@ -117,6 +183,7 @@ func _case_prior_contact() -> bool:
 	var entered_zone := false
 	for _i in 30:
 		await get_tree().physics_frame
+		await get_tree().process_frame
 		if enemy.get_debug_ambush_conditions(player).in_zone:
 			entered_zone = true
 			break

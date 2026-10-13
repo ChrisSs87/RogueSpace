@@ -51,8 +51,9 @@ class_name EnemyResource
 ## más adelante — no se fija ningún valor especial todavía, todos usan el
 ## mismo número de prueba por ahora.
 @export var detection_time_sec: float = 1.0
-## Opt-in: incomplete vision is suspicion, never encounter admission.
-## Defaults preserve legacy species. Threshold uses the existing light curve.
+## Opt-in light threshold and stable ALERT observation/search handling.
+## Visual encounter admission always requires progressive confirmation for
+## every species; this flag does not bypass that shared contract.
 @export var visual_suspicion_enabled := false
 @export_range(0.0, 1.0) var visual_suspicion_min_capability := 0.1
 @export var visual_observation_refresh_distance_m := 0.75
@@ -75,6 +76,9 @@ class_name EnemyResource
 
 @export_category("Combate")
 @export var combat_distance_tiles: float = 2.0
+## Explicit existing player-initiated ambush contract. This is NOT an extra
+## enemy sense; it only permits the validated STEALTH/back-zone initiation.
+@export var allow_player_ambush := false
 ## Si un enemigo persigue físicamente al jugador y por alguna razón nunca
 ## logra llegar a combat_distance_tiles (por ejemplo, queda trabado contra
 ## una pared), después de este tiempo se lo cuenta igual como "en posición"

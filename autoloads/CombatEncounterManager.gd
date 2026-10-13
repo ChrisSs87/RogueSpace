@@ -323,6 +323,13 @@ func _start_combat_now() -> void:
 
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	var valid_enemies: Array = _pending_enemies.filter(func(enemy): return _is_combat_ready(enemy, player))
+	# READY is provisional until this final boundary. Release participants
+	# invalidated while another actor was approaching; never silently filter
+	# an Enemy that still owns a COMBAT freeze/slot outside CombatManager.
+	var total_approach_cancelled := valid_enemies.is_empty()
+	for enemy in _pending_enemies:
+		if enemy not in valid_enemies and is_instance_valid(enemy) and enemy.has_method("abort_combat_approach"):
+			enemy.abort_combat_approach(total_approach_cancelled)
 	if valid_enemies.is_empty():
 		_cancel_pending_encounter()
 		return

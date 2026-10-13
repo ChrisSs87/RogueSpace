@@ -1246,3 +1246,39 @@ Este cierre es un checkpoint LOCAL en
 V2.1.5 se prepara desde ese checkpoint en rama/worktree independiente, sin
 implementar todavía mecánicas ambientales. Detalle reproducible:
 `docs/VARKHEM_V2_1_4_1_RECOVERY.md`.
+
+### Core Gameplay P0 — admisión y READY compartidos (checkpoint local)
+
+**P0 — VALIDADO AUTOMÁTICAMENTE. ANDROID — PENDIENTE.**
+Rama aislada `fix/core-gameplay-admission-ready-p0`, basada en recuperación
+Varkhem C `69ecc66737e23b313daddbfb5c02dac462964cfb`. No integración a main
+ni aprobación Android de B/C; los worktrees experimentales se conservan.
+
+La candidatura visual ordinaria requiere exposición confirmada en todas las
+especies. SOUND conserva investigación/candidatura propias, pero no permite
+READY/COMBAT a través de paredes o cobertura bloqueante. READY revalida contacto,
+LOS/cobertura/postura, banda física, clearance y navegación; el filtro final
+libera por abort público a participantes invalidados, sin dejarlos COMBAT-owned.
+La emboscada del jugador preexistente es una excepción sensorial explícita
+`allow_player_ambush`, no una excepción a geometría o navegación.
+DROP parcial y cancelación total/reentrada mantienen sus contratos distintos.
+No cambios de alcance, FOV, balance, población, START o solver.
+
+El negativo de contacto previo 6B ahora usa suelo/navegación propios de test,
+preflight físico/visual y exposición normal antes de entrar a la zona trasera.
+Se preservan sus tres casos y asserts originales. Fortress6A queda intacta.
+La preparación histórica W05 inválida y los ensayos fallidos se documentan,
+no se convierten retrospectivamente en PASS.
+
+Validación Godot 4.7.2: matriz P0 14/14, regresiones 24/24 y tres controles
+físicos/entorno PASS funcional / EXIT_0. Varkhem 65001–65006: 6 runs/9 sectores;
+Horvex 66001–66003: 3 runs/8 sectores; Ship: tres tamaños. Carga de editor EXIT_0,
+sin parse errors, conservando el diagnóstico preexistente `Safe save failed`.
+Una ejecución previa de DROP fue INCOMPLETE por límite externo de frames;
+la repetición completa sin ese límite pasó con sus deadlines internos intactos.
+
+`NATIVE_SHUTDOWN_AV` continúa ABIERTA y no investigada en P0. Ninguna ejecución
+final terminó con AV, sin que ello implique resolución de la incidencia.
+Contrato, diferencias Varkhen/Horvex, comandos, matriz completa y evidencia:
+`docs/CORE_GAMEPLAY_P0_CONTRACT.md`. Recuperación exclusivamente LOCAL,
+sin push, merge ni ZIP; requiere pruebas manuales Android antes de cierre.

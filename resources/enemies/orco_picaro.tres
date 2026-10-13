@@ -21,6 +21,7 @@ vision_range_tiles = 10.0
 vision_angle_deg = 105.0
 hearing_range_tiles = 4.0
 combat_distance_tiles = 2.5
+allow_player_ambush = true
 combat_approach_timeout_sec = 6.0
 perception_interval_sec = 0.2
 detection_time_sec = 1.0
