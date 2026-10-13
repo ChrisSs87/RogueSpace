@@ -1,8 +1,61 @@
-[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=8 format=3]
 [ext_resource type="Script" path="res://resources/run/RoomEnvironmentProfileResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/RoomCoverVariantResource.gd" id="2"]
+
+[sub_resource type="Resource" id="Console"]
+script = ExtResource("2")
+stable_id = &"military_service_console"
+family = 0
+category = 1
+allowed_semantic_ids = Array[StringName]([&"BARRACKS", &"ARMORY"])
+size = Vector3(1.8, 1.1, 0.9)
+body_color = Color(0.23, 0.29, 0.28, 1)
+accent_color = Color(0.3, 0.7, 0.55, 1)
+
+[sub_resource type="Resource" id="ArmoryMachine"]
+script = ExtResource("2")
+stable_id = &"armory_service_machine"
+family = 1
+category = 0
+allowed_semantic_ids = Array[StringName]([&"ARMORY"])
+size = Vector3(1.6, 2, 1.2)
+body_color = Color(0.3, 0.34, 0.29, 1)
+accent_color = Color(0.65, 0.48, 0.22, 1)
+
+[sub_resource type="Resource" id="Refrigerator"]
+script = ExtResource("2")
+stable_id = &"food_refrigeration_machine"
+family = 1
+category = 0
+allowed_semantic_ids = Array[StringName]([&"FOOD_STORAGE"])
+size = Vector3(1.6, 2, 1.2)
+body_color = Color(0.4, 0.46, 0.45, 1)
+accent_color = Color(0.3, 0.6, 0.7, 1)
+
+[sub_resource type="Resource" id="TallContainer"]
+script = ExtResource("2")
+stable_id = &"equipment_container_tall"
+family = 2
+category = 0
+allowed_semantic_ids = Array[StringName]([&"BARRACKS", &"ARMORY"])
+size = Vector3(1.6, 2, 1.2)
+body_color = Color(0.32, 0.4, 0.25, 1)
+accent_color = Color(0.58, 0.57, 0.36, 1)
+
+[sub_resource type="Resource" id="LowContainer"]
+script = ExtResource("2")
+stable_id = &"supply_container_medium"
+family = 2
+category = 1
+allowed_semantic_ids = Array[StringName]([&"BARRACKS", &"ARMORY", &"FOOD_STORAGE"])
+size = Vector3(1.8, 1.1, 0.9)
+body_color = Color(0.48, 0.4, 0.26, 1)
+accent_color = Color(0.63, 0.58, 0.4, 1)
+
 [resource]
 script = ExtResource("1")
 stable_id = &"VARKHEM_ROOM_ENVIRONMENT_B"
+cover_variants = [SubResource("Console"), SubResource("ArmoryMachine"), SubResource("Refrigerator"), SubResource("TallContainer"), SubResource("LowContainer")]
 room_light_addition = 2
 cover_family_by_semantic = {"ARMORY": "STORAGE", "FOOD_STORAGE": "STORAGE", "BARRACKS": "STORAGE"}
 excluded_semantic_ids = Array[StringName]([&"BASE_ACCESS"])

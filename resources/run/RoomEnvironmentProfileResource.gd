@@ -5,6 +5,8 @@ class_name RoomEnvironmentProfileResource
 @export var stable_id: StringName
 @export_range(0, 5) var room_light_addition := 2
 @export var cover_family_by_semantic: Dictionary = {}
+## Empty keeps the B box presentation/selection unchanged.
+@export var cover_variants: Array[RoomCoverVariantResource] = []
 @export var excluded_semantic_ids: Array[StringName] = []
 @export var max_covers_per_room := 2
 ## Keep a full cross clear: door half-width 1.2 + baked agent radius 0.55.

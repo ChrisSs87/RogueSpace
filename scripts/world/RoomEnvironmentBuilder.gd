@@ -1,6 +1,7 @@
 extends RefCounted
 
 const LIGHT := preload("res://scripts/world/RoomLogicalLight.gd")
+const VISUALS := preload("res://scripts/world/RoomCoverVisuals.gd")
 
 ## Restrained first subset: destination perimeter props, BEFORE the existing
 ## collider-derived bake. No solver changes, no navigation drawn by hand.
@@ -35,7 +36,13 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 		var first_high := rng.randi_range(0,1) == 0
 		for index in mini(profile.max_covers_per_room,2):
 			var high := first_high if index == 0 else not first_high
+			var category := LogicalCover.Category.HIGH if high else LogicalCover.Category.MEDIUM
+			var variant := _select_variant(profile,id,category,seed,location.node_id,index)
+			if not profile.cover_variants.is_empty() and variant == null:
+				report.rejected.append({"node":location.node_id,"index":index,"reason":"no compatible configured cover variant"})
+				continue
 			var size := profile.cover_size_high if high else profile.cover_size_medium
+			if variant != null: size = variant.size
 			# Positive X avoids the authored room guard route on negative X.
 			var center := Vector3(dimensions.x*profile.corner_fraction, size.y*0.5, dimensions.y*profile.corner_fraction*(-1 if index == 0 else 1))
 			var bounds := AABB(center-size*0.5,size)
@@ -78,5 +85,24 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 			mesh.material = material
 			cover.add_child(mesh)
 			cover.set_meta("cover_family",family)
-			report.covers.append({"node":location.node_id,"semantic":id,"family":family,"category":cover.category,"position":center,"size":size})
+			var variant_id := "legacy_box"
+			if variant != null:
+				family = RoomCoverVariantResource.Family.keys()[variant.family]
+				variant_id = String(variant.stable_id)
+				material.albedo_color = variant.body_color
+				cover.set_meta("cover_family",family)
+				cover.set_meta("cover_variant",variant.stable_id)
+				VISUALS.dress(cover,variant)
+			report.covers.append({"node":location.node_id,"semantic":id,"family":family,"variant":variant_id,"category":cover.category,"position":center,"size":size})
 	return report
+
+static func _select_variant(profile: RoomEnvironmentProfileResource, semantic: StringName, category: int, seed: int, node: StringName, index: int) -> RoomCoverVariantResource:
+	var eligible: Array[RoomCoverVariantResource] = []
+	for variant in profile.cover_variants:
+		if variant.category == category and variant.allowed_semantic_ids.has(semantic): eligible.append(variant)
+	if eligible.is_empty(): return null
+	# Separate stream: adding presentation variants does not consume the B
+	# placement/category RNG or perturb subsequent room placements.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = String("%s/%s/%s/%s" % [seed,profile.stable_id,node,index]).hash()
+	return eligible[rng.randi_range(0,eligible.size()-1)]
