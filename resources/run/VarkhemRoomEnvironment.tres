@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/RoomEnvironmentProfileResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+stable_id = &"VARKHEM_ROOM_ENVIRONMENT_B"
+room_light_addition = 2
+cover_family_by_semantic = {"ARMORY": "STORAGE", "FOOD_STORAGE": "STORAGE", "BARRACKS": "STORAGE"}
+excluded_semantic_ids = Array[StringName]([&"BASE_ACCESS"])
+max_covers_per_room = 2
+protected_axis_half_width_m = 1.8
+wall_margin_m = 0.35
+cover_size_high = Vector3(1.6, 2, 1.2)
+cover_size_medium = Vector3(1.8, 1.1, 0.9)
+corner_fraction = 0.32

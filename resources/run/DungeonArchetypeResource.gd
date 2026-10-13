@@ -16,3 +16,5 @@ class_name DungeonArchetypeResource
 @export var population_density := 0.0
 @export var required_room_roles: Array[StringName] = []
 @export var preferred_room_roles: Array[StringName] = []
+## Null keeps legacy geometry, lighting and navigation sources unchanged.
+@export var room_environment_profile: RoomEnvironmentProfileResource

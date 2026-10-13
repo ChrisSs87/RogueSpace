@@ -42,6 +42,7 @@ var current_plan: DungeonPlan
 var current_content_plan: ContentPlacementPlan
 var current_content_profile: ContentPlacementProfileResource
 var current_runtime_content_report: Dictionary = {}
+var current_room_environment_report: Dictionary = {}
 var assembly_error := ""
 var _assembly_signature := ""
 var _topology_signature := ""
@@ -209,6 +210,9 @@ func _regenerate_current_sector() -> void:
 	_build_transition_slot()
 	_rebuild_semantic_location_debug(root)
 	_attach_semantic_presentations(root)
+	current_room_environment_report = {}
+	if active_archetype != null and active_archetype.room_environment_profile != null:
+		current_room_environment_report = preload("res://scripts/world/RoomEnvironmentBuilder.gd").build(current_plan,root,active_archetype.room_environment_profile,sector_effective_seed)
 	_rebuild_content_placement()
 	_update_debug()
 	await get_tree().physics_frame

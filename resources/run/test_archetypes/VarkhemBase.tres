@@ -1,4 +1,5 @@
-[gd_resource type="Resource" load_steps=34 format=3]
+[gd_resource type="Resource" load_steps=35 format=3]
+[ext_resource type="Resource" path="res://resources/run/VarkhemRoomEnvironment.tres" id="14_environment"]
 [ext_resource type="Script" path="res://resources/run/DungeonArchetypeResource.gd" id="1"]
 [ext_resource type="Script" path="res://resources/run/DungeonSectorDefinitionResource.gd" id="2"]
 [ext_resource type="Script" path="res://resources/run/DungeonSectorPathResource.gd" id="3"]
@@ -250,6 +251,7 @@ sectors = [SubResource("Ground"), SubResource("Upper")]
 
 [resource]
 script = ExtResource("1")
+room_environment_profile = ExtResource("14_environment")
 archetype_id = &"VARKHEM_BASE"
 display_name = "Varkhem Base"
 sector_count_min = 1

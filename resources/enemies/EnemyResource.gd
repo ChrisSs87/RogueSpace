@@ -51,6 +51,11 @@ class_name EnemyResource
 ## más adelante — no se fija ningún valor especial todavía, todos usan el
 ## mismo número de prueba por ahora.
 @export var detection_time_sec: float = 1.0
+## Opt-in: incomplete vision is suspicion, never encounter admission.
+## Defaults preserve legacy species. Threshold uses the existing light curve.
+@export var visual_suspicion_enabled := false
+@export_range(0.0, 1.0) var visual_suspicion_min_capability := 0.1
+@export var visual_observation_refresh_distance_m := 0.75
 
 ## Capacidad de detección (0.0-1.0) según el nivel de luz DONDE ESTÁ EL
 ## JUGADOR (índice 0 = luz 0 ... índice 5 = luz 5). La iluminación nunca

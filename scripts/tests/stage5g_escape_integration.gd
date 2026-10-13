@@ -18,6 +18,7 @@ func _ready() -> void:
 	player.global_position = orc.global_position + Vector3(forward.x, 0.0, forward.z).normalized()
 	await get_tree().create_timer(1.4).timeout
 	if orc.get_debug_state_name() != "CHASE":
+		print("5G_ESCAPE_FAILURE_CONTEXT="+JSON.stringify({"state":orc.get_debug_state_name(),"vision":orc._last_vision_result,"sight":orc._sight_timer,"fov":orc._debug_fov_str,"los":orc._debug_los_str,"position":orc.global_position,"player":player.global_position,"searching":orc._searching_at_last_known,"search_index":orc._alert_search_index}))
 		push_error("Stage5G escape: el orco no detectó por percepción real")
 		get_tree().quit(1)
 		return

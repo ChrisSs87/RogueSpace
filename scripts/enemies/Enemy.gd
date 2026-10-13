@@ -688,9 +688,10 @@ func _on_perception_tick() -> void:
 
 	var vision_result: String = _evaluate_vision(player)
 	_last_vision_result = vision_result
-	var heard_player: bool = vision_result == VISION_NONE and _has_recent_sound_contact()
-	_encounter_contact_valid = vision_result != VISION_NONE or heard_player
-	_current_contact_kind = "VISION" if vision_result != VISION_NONE else ("SOUND" if heard_player else "NONE")
+	var visual_contact := vision_result == VISION_CHASE or (vision_result == VISION_ALERT and not enemy_resource.visual_suspicion_enabled)
+	var heard_player: bool = not visual_contact and _has_recent_sound_contact()
+	_encounter_contact_valid = visual_contact or heard_player
+	_current_contact_kind = "VISION" if visual_contact else ("SOUND" if heard_player else ("VISUAL_SUSPICION" if vision_result == VISION_ALERT else "NONE"))
 
 	if vision_result == VISION_CHASE:
 		_on_player_seen(player.global_position, true)
@@ -706,7 +707,7 @@ func _on_perception_tick() -> void:
 			_cancelled_approach_reentry_pending = false
 			_must_lose_contact_before_reentry = false
 		_try_register_encounter_candidate()
-	elif _must_lose_contact_before_reentry:
+	elif _must_lose_contact_before_reentry and vision_result == VISION_NONE:
 		# Un DROPPED debe perder el rastro y obtener una percepción NUEVA antes
 		# de poder abrir otro encuentro; evita una cola automática al reset.
 		_must_lose_contact_before_reentry = false
@@ -749,6 +750,10 @@ func _evaluate_vision(player: Node3D) -> String:
 	if _is_within_proximity_override(player):
 		capability = 1.0
 	_debug_capability_str = "%.0f%%" % (capability * 100.0)
+	if enemy_resource.visual_suspicion_enabled and capability < enemy_resource.visual_suspicion_min_capability:
+		_sight_timer = 0.0
+		_debug_sight_str = "SUSPICION BELOW LIGHT THRESHOLD"
+		return VISION_NONE
 
 	_sight_timer += enemy_resource.perception_interval_sec * capability
 	_debug_sight_str = "%.1f / %.1fs" % [_sight_timer, enemy_resource.detection_time_sec]
@@ -919,6 +924,15 @@ func _has_clear_line(from_pos: Vector3, to_pos: Vector3) -> bool:
 ## observación visual incompleta siempre queda en ALERT: noise_response_mode
 ## solo se consulta en _on_player_heard().
 func _on_player_seen(position: Vector3, is_confirmed: bool) -> void:
+	# A sustained uncertain sighting retains ALERT without restarting its
+	# local search each sensory tick. Only useful new spatial information
+	# replaces the observed location; hidden Player is never queried here.
+	if enemy_resource.visual_suspicion_enabled and not is_confirmed and _state == State.ALERT and _last_known_source == "VISION" and position.distance_to(_last_known_player_position) < enemy_resource.visual_observation_refresh_distance_m:
+		# Fresh evidence refreshes memory, NOT state, route or search probes.
+		# Otherwise a long uncertain observation would exhaust the hidden-search
+		# timeout before the target even disappeared.
+		_time_since_detection = 0.0
+		return
 	_alert_search_points.clear()
 	_last_known_player_position = position
 	_last_known_source = "VISION"
@@ -1063,8 +1077,13 @@ func refresh_encounter_contact_valid() -> bool:
 		return false
 
 	var has_visual_baseline: bool = _passes_vision_baseline(player)
-	var has_hearing_contact: bool = not has_visual_baseline and _has_recent_sound_contact()
-	_encounter_contact_valid = has_visual_baseline or has_hearing_contact
+	var confirmed_visual := has_visual_baseline
+	if enemy_resource.visual_suspicion_enabled:
+		var capability := _get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
+		if _is_within_proximity_override(player): capability = 1.0
+		confirmed_visual = has_visual_baseline and _sight_timer >= enemy_resource.detection_time_sec and capability >= enemy_resource.visual_suspicion_min_capability
+	var has_hearing_contact: bool = not confirmed_visual and _has_recent_sound_contact()
+	_encounter_contact_valid = confirmed_visual or has_hearing_contact
 	return _encounter_contact_valid
 
 
@@ -1153,6 +1172,10 @@ func _check_lose_target_timeout() -> void:
 	if _state != State.ALERT or not _searching_at_last_known:
 		return
 	if _time_since_detection < enemy_resource.lose_target_timeout_sec:
+		return
+	# Continuous uncertain evidence holds ALERT, not a PATROL/ALERT loop.
+	# Once baseline/light is lost the existing timeout resumes normally.
+	if enemy_resource.visual_suspicion_enabled and _last_vision_result == VISION_ALERT:
 		return
 
 	_state = State.PATROL if enemy_resource.can_patrol else State.IDLE
@@ -1249,6 +1272,11 @@ func _process_local_search(delta: float) -> void:
 	velocity.x = 0.0
 	velocity.z = 0.0
 	_debug_requested_speed_mps = 0.0
+	# At the observed point, retain a currently valid uncertain sighting.
+	# Turning toward speculative search probes would manufacture loss of FOV
+	# before exposure can confirm. Hidden targets still use bounded search.
+	if enemy_resource.visual_suspicion_enabled and _last_known_source == "VISION" and _last_vision_result == VISION_ALERT:
+		return
 	if _alert_search_index >= _alert_search_points.size(): return
 	var target := _alert_search_points[_alert_search_index]
 	if _alert_search_pause > 0.0:
