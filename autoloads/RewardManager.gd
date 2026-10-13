@@ -53,6 +53,36 @@ var _closing := false
 var _sequence_id := 0
 var _player_exit_callback := Callable()
 var _last_close_result: Dictionary = {}
+var _decision_id := 0
+
+
+func get_decision_id() -> int:
+	return _decision_id
+
+
+func can_skip_optional_reward() -> bool:
+	return _active and _step in [STEP_DNA_CHOICE, STEP_CARD_UNLOCKED, STEP_CARD_REPLACE_CHOICE, STEP_KIT_OFFER]
+
+
+## Resolve exactly the displayed decision, not the whole sequence. Tokens
+## also distinguish consecutive DNA choices with the same STEP/species.
+func skip_optional_reward(expected_sequence_id: int, expected_decision_id: int) -> bool:
+	if expected_sequence_id != _sequence_id or expected_decision_id != _decision_id or not can_skip_optional_reward():
+		return false
+	# Invalidate this action before any synchronous observer can reenter.
+	_decision_id += 1
+	match _step:
+		STEP_DNA_CHOICE:
+			_pending_dna_species.pop_front()
+		STEP_CARD_UNLOCKED, STEP_CARD_REPLACE_CHOICE:
+			_pending_unlocked_card = null
+	_advance()
+	return true
+
+
+func _notify_step_changed() -> void:
+	_decision_id += 1
+	reward_step_changed.emit()
 
 
 func is_reward_active() -> bool:
@@ -106,6 +136,7 @@ func start_reward_sequence(defeated_species: Array, player: Node3D) -> void:
 	_kit_offer_pending = randf() < recovery_item_chance and RunState.player_health < RunState.max_player_health
 	_pending_unlocked_card = null
 	_step = STEP_SUMMARY
+	_decision_id += 1
 
 	reward_sequence_started.emit()
 	# A started listener may cancel or destroy the owner synchronously.
@@ -116,7 +147,7 @@ func start_reward_sequence(defeated_species: Array, player: Node3D) -> void:
 		_finish()
 		return
 
-	reward_step_changed.emit()
+	_notify_step_changed()
 
 
 func get_step() -> String:
@@ -186,7 +217,7 @@ func choose_dna_slot(equipment_slot: String) -> void:
 
 	_pending_unlocked_card = unlocked
 	_step = STEP_DNA_RESULT
-	reward_step_changed.emit()
+	_notify_step_changed()
 
 
 ## Llamado por RewardUI con "Continuar", tanto después de un mensaje de ADN
@@ -195,7 +226,7 @@ func acknowledge_message() -> void:
 	if _step == STEP_DNA_RESULT:
 		if _pending_unlocked_card != null:
 			_step = STEP_CARD_UNLOCKED
-			reward_step_changed.emit()
+			_notify_step_changed()
 			return
 		_advance()
 	elif _step == STEP_KIT_RESULT:
@@ -227,7 +258,7 @@ func incorporate_unlocked_card() -> void:
 	if _step != STEP_CARD_UNLOCKED or _pending_unlocked_card == null:
 		return
 	_step = STEP_CARD_REPLACE_CHOICE
-	reward_step_changed.emit()
+	_notify_step_changed()
 
 
 ## El jugador decide dejarla afuera: queda desbloqueada (no se vuelve a
@@ -274,7 +305,7 @@ func use_first_aid_kit() -> void:
 		return
 	_last_message = "Kit de Primeros Auxilios usado.\nVida: %d/%d" % [RunState.player_health, RunState.max_player_health]
 	_step = STEP_KIT_RESULT
-	reward_step_changed.emit()
+	_notify_step_changed()
 
 
 func decline_first_aid_kit() -> void:
@@ -286,13 +317,13 @@ func decline_first_aid_kit() -> void:
 func _advance() -> void:
 	if not _pending_dna_species.is_empty():
 		_step = STEP_DNA_CHOICE
-		reward_step_changed.emit()
+		_notify_step_changed()
 		return
 
 	if _kit_offer_pending:
 		_kit_offer_pending = false  # se ofrece una única vez por encuentro
 		_step = STEP_KIT_OFFER
-		reward_step_changed.emit()
+		_notify_step_changed()
 		return
 
 	_finish()

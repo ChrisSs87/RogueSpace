@@ -70,6 +70,10 @@ text = "Escudo"
 custom_minimum_size = Vector2(0, 50)
 text = "Traje"
 
+[node name="SkipButton" type="Button" parent="Root/DNAChoicePanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "OMITIR"
+
 [node name="MessagePanel" type="VBoxContainer" parent="Root"]
 anchor_left = 0.5
 anchor_right = 0.5
@@ -118,7 +122,7 @@ text = "Incorporar al mazo"
 
 [node name="LeaveOutButton" type="Button" parent="Root/CardUnlockedPanel"]
 custom_minimum_size = Vector2(0, 50)
-text = "Dejar fuera del mazo"
+text = "OMITIR"
 
 [node name="CardReplacePanel" type="VBoxContainer" parent="Root"]
 anchor_left = 0.5
@@ -183,6 +187,10 @@ text = "—"
 custom_minimum_size = Vector2(0, 36)
 text = "—"
 
+[node name="SkipButton" type="Button" parent="Root/CardReplacePanel"]
+custom_minimum_size = Vector2(0, 50)
+text = "OMITIR"
+
 [node name="KitOfferPanel" type="VBoxContainer" parent="Root"]
 anchor_left = 0.5
 anchor_right = 0.5
@@ -208,4 +216,4 @@ text = "Usar"
 
 [node name="DeclineKitButton" type="Button" parent="Root/KitOfferPanel"]
 custom_minimum_size = Vector2(0, 50)
-text = "Descartar"
+text = "OMITIR"

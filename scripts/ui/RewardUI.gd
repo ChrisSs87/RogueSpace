@@ -42,11 +42,38 @@ const MAX_REPLACE_SLOTS: int = 10
 
 var _replace_slot_buttons: Array = []
 var _owned_sequence_id := 0
+var _displayed_decision_id := 0
+var _skip_in_flight := false
+var _back_policy_owned := false
+var _previous_quit_on_go_back := true
+
+
+func _input(event: InputEvent) -> void:
+	if RewardManager.is_reward_active() and event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+
+
+func _restore_back_policy() -> void:
+	if _back_policy_owned:
+		get_tree().quit_on_go_back = _previous_quit_on_go_back
+		_back_policy_owned = false
+
+
+func _on_skip_pressed() -> void:
+	if _skip_in_flight or not visible:
+		return
+	_skip_in_flight = true
+	RewardManager.skip_optional_reward(_owned_sequence_id, _displayed_decision_id)
+	# One UI action per rendered frame, not a time-based debounce. A synchronous
+	# panel replacement must not let a second signal consume the next decision.
+	await get_tree().process_frame
+	_skip_in_flight = false
 
 
 func _exit_tree() -> void:
 	if _owned_sequence_id > 0:
 		RewardManager.abort_reward_sequence("reward_ui_exiting", _owned_sequence_id)
+	_restore_back_policy()
 
 
 func _ready() -> void:
@@ -59,9 +86,11 @@ func _ready() -> void:
 	suit_button.pressed.connect(func(): RewardManager.choose_dna_slot("suit"))
 	continue_button.pressed.connect(func(): RewardManager.acknowledge_message())
 	incorporate_button.pressed.connect(func(): RewardManager.incorporate_unlocked_card())
-	leave_out_button.pressed.connect(func(): RewardManager.leave_unlocked_card_out())
+	leave_out_button.pressed.connect(_on_skip_pressed)
 	use_kit_button.pressed.connect(func(): RewardManager.use_first_aid_kit())
-	decline_kit_button.pressed.connect(func(): RewardManager.decline_first_aid_kit())
+	decline_kit_button.pressed.connect(_on_skip_pressed)
+	$Root/DNAChoicePanel/SkipButton.pressed.connect(_on_skip_pressed)
+	$Root/CardReplacePanel/SkipButton.pressed.connect(_on_skip_pressed)
 
 	for i in MAX_REPLACE_SLOTS:
 		var slot_button: Button = replace_slots_container.get_child(i)
@@ -84,16 +113,22 @@ func _hide_all_panels() -> void:
 
 func _on_sequence_started() -> void:
 	_owned_sequence_id = RewardManager.get_sequence_id()
+	if not _back_policy_owned:
+		_previous_quit_on_go_back = get_tree().quit_on_go_back
+		_back_policy_owned = true
+		get_tree().quit_on_go_back = false
 	visible = true
 
 
 func _on_sequence_finished() -> void:
 	_owned_sequence_id = 0
 	visible = false
+	_restore_back_policy()
 
 
 func _on_step_changed() -> void:
 	var step: String = RewardManager.get_step()
+	_displayed_decision_id = RewardManager.get_decision_id()
 	_hide_all_panels()
 
 	match step:
