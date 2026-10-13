@@ -1403,6 +1403,9 @@ func get_sector_profile_metrics() -> Dictionary:
 	if not current_applied_environment.is_empty():
 		report.applied.environment = current_applied_environment.profile
 		report.applied["room_light_addition"] = current_applied_environment.room_light_addition
+	# Expanded PROFILES diagnostics only; no permanent HUD text or AI mutation.
+	if current_room_environment_report.has("distribution"):
+		report.applied["distribution_covers"] = current_room_environment_report.distribution.duplicate(true)
 	if current_content_plan != null:
 		report.applied["planning_profile"] = String(current_content_plan.profile_id)
 		report.applied["content_status"] = "PLANNED_PENDING_RUNTIME" if current_content_plan.is_valid() else "PLAN_REJECTED"

@@ -5,9 +5,17 @@ func _additional_physical_errors(dungeon: Node3D) -> Array:
 	var report: Dictionary = dungeon.current_room_environment_report
 	var modules := dungeon.get_node("AssembledModules")
 	var map: RID = dungeon.nav_region.get_navigation_map()
+	var environment: RoomEnvironmentProfileResource = dungeon.active_archetype.room_environment_profile
 	if report.is_empty(): errors.append("missing environment report")
 	for row in report.get("covers",[]):
-		if row.semantic in [&"BASE_ACCESS",&"COMMAND_ROOM"] or dungeon.current_plan.module_types[row.node] not in [&"ROOM",&"SIDE_ROOM"]: errors.append("cover in protected module")
+		var declared_distribution := false
+		for audit in report.get("distribution",[]):
+			if audit.node == row.node and audit.semantic == row.semantic:
+				for candidate in audit.examined:
+					if not candidate.accepted or candidate.position != row.position: continue
+					for configured in environment.distribution_cover_candidates:
+						if configured.get("id") == candidate.id and configured.get("semantic") == row.semantic and configured.get("role") == dungeon.current_plan.module_types[row.node] and row.category == LogicalCover.Category.MEDIUM: declared_distribution = true
+		if row.semantic in [&"BASE_ACCESS",&"COMMAND_ROOM"] or (dungeon.current_plan.module_types[row.node] not in [&"ROOM",&"SIDE_ROOM"] and not declared_distribution): errors.append("cover in protected module")
 		var module: Node3D = modules.get_node(NodePath(String(row.node)))
 		var covers := 0
 		for child in module.get_children():

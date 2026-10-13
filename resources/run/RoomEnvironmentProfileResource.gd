@@ -15,3 +15,10 @@ class_name RoomEnvironmentProfileResource
 @export var cover_size_high := Vector3(1.6, 2.0, 1.2)
 @export var cover_size_medium := Vector3(1.8, 1.1, 0.9)
 @export var corner_fraction := 0.32
+
+## Opt-in distribution props. Each dictionary declares id, semantic, role and
+## position_fraction (local XZ / actual footprint). Empty is legacy-inert.
+## These candidates reuse MEDIUM variants and all existing physical reserves.
+@export var distribution_cover_candidates: Array[Dictionary] = []
+@export_range(0, 1) var distribution_cover_probability := 0.0
+@export_range(0, 2) var max_covers_per_distribution := 0
