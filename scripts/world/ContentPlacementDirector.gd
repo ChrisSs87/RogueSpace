@@ -65,9 +65,12 @@ static func build(plan: DungeonPlan, profile: ContentPlacementProfileResource, p
 		minimum = bounds.x
 		maximum = bounds.y
 	var desired := rng.randi_range(minimum, maximum) if maximum >= minimum else minimum
+	result.budget_range = Vector2i(minimum, maximum)
+	result.requested_slot_count = desired
 	if not profile.budget_capacity_tag.is_empty():
 		var capacity := candidates.filter(func(slot: DungeonContentSlot): return slot.tags.has(profile.budget_capacity_tag)).size()
 		desired = mini(desired, capacity)
+	result.effective_slot_budget = desired
 	if not profile.priority_slot_tags.is_empty():
 		_select_grouped(result, candidates, profile, rng, desired, plan)
 		return result

@@ -15,3 +15,7 @@ class_name DungeonSectorDefinitionResource
 @export var preferred_room_roles: Array[StringName] = []
 @export var transition_to_next_type: StringName = &""
 @export var semantic_locations: Array[SemanticLocationResource] = []
+## Explicit consumer profiles. Null preserves archetype environment / template
+## content / test fallback. The legacy *_profile_id strings are labels, not keys.
+@export var room_environment_profile: RoomEnvironmentProfileResource
+@export var content_placement_profile: ContentPlacementProfileResource

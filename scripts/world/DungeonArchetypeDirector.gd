@@ -3,6 +3,43 @@ class_name DungeonArchetypeDirector
 
 const RUN_DIRECTOR := preload("res://scripts/world/RunDirector.gd")
 
+## Resolve references, never infer gameplay values from display labels. Pure:
+## no mutation, RNG consumption, global lighting changes or resource cloning.
+static func resolve_sector_profiles(archetype: DungeonArchetypeResource, sector: DungeonSectorDefinitionResource, template: DungeonTemplateResource, fallback: ContentPlacementProfileResource) -> Dictionary:
+	var environment: RoomEnvironmentProfileResource = archetype.room_environment_profile if archetype != null else null
+	var environment_source := "archetype" if environment != null else "legacy_none"
+	if sector != null and sector.room_environment_profile != null:
+		environment = sector.room_environment_profile
+		environment_source = "sector_override"
+	var content: ContentPlacementProfileResource = template.content_placement_profile if template != null else null
+	var content_source := "template" if content != null else "legacy_test_fallback"
+	if content == null: content = fallback
+	if sector != null and sector.content_placement_profile != null:
+		content = sector.content_placement_profile
+		content_source = "sector_override"
+	var errors: Array[String] = []
+	if environment != null and (environment.stable_id.is_empty() or environment.room_light_addition < 0 or environment.room_light_addition > 5):
+		errors.append("invalid explicit room environment profile")
+	if content == null or content.stable_id.is_empty(): errors.append("missing/invalid effective content profile")
+	var requested := {
+		"archetype_environment":String(archetype.room_environment_profile.stable_id) if archetype != null and archetype.room_environment_profile != null else "",
+		"template_content":String(template.content_placement_profile.stable_id) if template != null and template.content_placement_profile != null else "",
+		"legacy_fallback_content":String(fallback.stable_id) if fallback != null else "",
+		"archetype_light_label":String(archetype.light_profile_id) if archetype != null else "",
+		"sector_light_label":String(sector.light_profile_id) if sector != null else "",
+		"archetype_population_label":String(archetype.population_profile_id) if archetype != null else "",
+		"sector_population_label":String(sector.population_profile_id) if sector != null else "",
+		"archetype_density":archetype.population_density if archetype != null else 0.0,
+		"sector_density":sector.population_density if sector != null else null,
+		"sector_environment":String(sector.room_environment_profile.stable_id) if sector != null and sector.room_environment_profile != null else "",
+		"sector_content":String(sector.content_placement_profile.stable_id) if sector != null and sector.content_placement_profile != null else "",
+	}
+	return {"environment":environment,"content":content,"errors":errors,"requested":requested,
+		"effective":{"environment":String(environment.stable_id) if environment != null else "NONE",
+			"environment_source":environment_source,"content":String(content.stable_id) if content != null else "NONE",
+			"content_source":content_source},
+		"limitations":["LEGACY_PROFILE_IDS_ARE_LABELS_NOT_RESOLVER_KEYS","DENSITY_BLOCKED_NO_APPROVED_BUDGET_CONTRACT"]}
+
 ## El RNG de archetype/sector es local y derivado del seed de run. No toca el
 ## RNG global ni sabe nada de geometría o B+C.
 func create_sector_run(archetype: DungeonArchetypeResource, run_seed: int) -> DungeonSectorRun:

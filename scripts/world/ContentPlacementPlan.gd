@@ -6,6 +6,10 @@ var profile_id: StringName
 var all_slots: Array[DungeonContentSlot] = []
 var selected_slots: Array[DungeonContentSlot] = []
 var generation_error := ""
+## Read-only budget telemetry, separate from selection/materialization counts.
+var budget_range := Vector2i.ZERO
+var requested_slot_count := 0
+var effective_slot_budget := 0
 ## Opt-in placement exclusions; never silently reduce a requested population.
 var start_safety_rejections: Array[Dictionary] = []
 

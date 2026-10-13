@@ -43,6 +43,9 @@ var current_content_plan: ContentPlacementPlan
 var current_content_profile: ContentPlacementProfileResource
 var current_runtime_content_report: Dictionary = {}
 var current_room_environment_report: Dictionary = {}
+var current_sector_profiles: Dictionary = {}
+var current_applied_environment: Dictionary = {}
+var sector_profiles_debug := false
 var assembly_error := ""
 var _assembly_signature := ""
 var _topology_signature := ""
@@ -210,9 +213,18 @@ func _regenerate_current_sector() -> void:
 	_build_transition_slot()
 	_rebuild_semantic_location_debug(root)
 	_attach_semantic_presentations(root)
+	_resolve_sector_profiles()
+	if not current_sector_profiles.errors.is_empty():
+		assembly_valid = false
+		assembly_error = "sector profile resolution: %s" % current_sector_profiles.errors
+		_update_debug()
+		push_error(assembly_error)
+		return
 	current_room_environment_report = {}
-	if active_archetype != null and active_archetype.room_environment_profile != null:
-		current_room_environment_report = preload("res://scripts/world/RoomEnvironmentBuilder.gd").build(current_plan,root,active_archetype.room_environment_profile,sector_effective_seed)
+	var environment: RoomEnvironmentProfileResource = current_sector_profiles.environment
+	if environment != null:
+		current_room_environment_report = preload("res://scripts/world/RoomEnvironmentBuilder.gd").build(current_plan,root,environment,sector_effective_seed)
+		current_applied_environment = {"profile":String(environment.stable_id),"room_light_addition":environment.room_light_addition}
 	_rebuild_content_placement()
 	_update_debug()
 	await get_tree().physics_frame
@@ -237,6 +249,7 @@ func _regenerate_current_sector() -> void:
 		_validate_runtime_content_navigation()
 	_reposition_player()
 	_update_debug()
+	print("SECTOR_PROFILES=" + JSON.stringify(get_sector_profile_metrics()))
 	print("6G ASSEMBLY seed=%d sector_retry=%d effective_sector_seed=%d modules=%d proxies=%d vertices=%d polygons=%d valid=%s nav=%s ms=%d signature=%s" % [seed, sector_retry_index, sector_effective_seed, module_count, proxies, nav_mesh.vertices.size() if nav_mesh != null else 0, nav_mesh.get_polygon_count() if nav_mesh != null else 0, assembly_valid, nav_ready, Time.get_ticks_msec() - started, _assembly_signature])
 
 
@@ -1161,6 +1174,9 @@ func _clear_previous_assembly() -> void:
 	bake_proxy_reports.clear()
 	current_content_plan = null
 	current_content_profile = null
+	current_sector_profiles.clear()
+	current_room_environment_report.clear()
+	current_applied_environment.clear()
 	current_runtime_content_report.clear()
 	module_count = 0
 	nav_mesh = null
@@ -1208,6 +1224,25 @@ func _update_debug() -> void:
 		label.add_theme_font_size_override("font_size", 18)
 		layer.add_child(label)
 		add_child(layer)
+	if not has_node("SectorProfilesDebugLayer"):
+		var profile_layer := CanvasLayer.new()
+		profile_layer.name = "SectorProfilesDebugLayer"
+		add_child(profile_layer)
+		var button := Button.new()
+		button.text = "PROFILES"
+		button.position = Vector2(20,160)
+		button.custom_minimum_size = Vector2(120,40)
+		button.pressed.connect(func(): sector_profiles_debug = not sector_profiles_debug; _update_debug())
+		profile_layer.add_child(button)
+		var panel := RichTextLabel.new()
+		panel.name = "Details"
+		panel.position = Vector2(20,205)
+		panel.size = Vector2(520,300)
+		panel.scroll_active = true
+		profile_layer.add_child(panel)
+	var profile_details: RichTextLabel = get_node("SectorProfilesDebugLayer/Details")
+	profile_details.visible = sector_profiles_debug
+	if sector_profiles_debug: profile_details.text = JSON.stringify(get_sector_profile_metrics(),"  ")
 	var nav_label := nav_sync_state if nav_sync_state == "SYNCING" else ("OK" if nav_ready else "FAIL")
 	var slot_count := current_content_plan.selected_slots.size() if current_content_plan != null else 0
 	if archetype_mode and active_archetype != null and sector_run != null:
@@ -1299,6 +1334,9 @@ func _rebuild_content_placement() -> void:
 	if current_plan == null or not assembly_valid:
 		return
 	var profile := _active_content_profile()
+	if not current_sector_profiles.errors.is_empty():
+		push_error("content profile resolution: %s" % current_sector_profiles.errors)
+		return
 	current_content_profile = profile
 	var content_size_id: StringName = &""
 	if sector_run != null and current_sector_index < sector_run.sector_size_profiles.size():
@@ -1335,9 +1373,57 @@ func _rebuild_content_placement() -> void:
 
 
 func _active_content_profile() -> ContentPlacementProfileResource:
-	if active_template != null and active_template.content_placement_profile != null:
-		return active_template.content_placement_profile
-	return TEST_CONTENT_PROFILE_A if test_content_profile_index == 0 else TEST_CONTENT_PROFILE_B
+	_resolve_sector_profiles()
+	return current_sector_profiles.content
+
+
+func _resolve_sector_profiles() -> void:
+	var sector := sector_run.get_sector(current_sector_index) if sector_run != null else null
+	var fallback := TEST_CONTENT_PROFILE_A if test_content_profile_index == 0 else TEST_CONTENT_PROFILE_B
+	current_sector_profiles = ARCHETYPE_DIRECTOR.resolve_sector_profiles(active_archetype,sector,active_template,fallback)
+
+
+## Snapshot observed state, not just requested configuration. No resource refs
+## escape into the JSON/debug report. Query live actors after queued removals.
+func get_sector_profile_metrics() -> Dictionary:
+	var report := {"biome":String(active_archetype.archetype_id) if active_archetype != null else "LEGACY",
+		"seed":seed,"effective_seed":sector_effective_seed,"sector":current_sector_index,
+		"requested":current_sector_profiles.get("requested",{}).duplicate(true),
+		"effective":current_sector_profiles.get("effective",{}).duplicate(true),
+		"errors":current_sector_profiles.get("errors",[]).duplicate(),
+		"limitations":current_sector_profiles.get("limitations",[]).duplicate(),
+		"applied":{"environment":"NOT_APPLIED","ambient_observed":LightingManager.ambient_light_level,
+			"lit_rooms":current_room_environment_report.get("lit_rooms",[]).duplicate(),
+			"content":"NOT_APPLIED","budget_range":[],"requested_slots":0,"effective_budget":0,
+			"selected_slots":0,"instantiated_reported":current_runtime_content_report.get("spawned",[]).size(),
+			"live_enemies":0,"density_applied":false,"runtime_rejections":{}}}
+	if sector_run != null:
+		report["sector_id"] = String(sector_run.get_sector(current_sector_index).sector_id)
+		report["size"] = String(sector_run.sector_size_profiles[current_sector_index].size_id)
+	if not current_applied_environment.is_empty():
+		report.applied.environment = current_applied_environment.profile
+		report.applied["room_light_addition"] = current_applied_environment.room_light_addition
+	if current_content_plan != null:
+		report.applied["planning_profile"] = String(current_content_plan.profile_id)
+		report.applied["content_status"] = "PLANNED_PENDING_RUNTIME" if current_content_plan.is_valid() else "PLAN_REJECTED"
+		report.applied.budget_range = [current_content_plan.budget_range.x,current_content_plan.budget_range.y]
+		report.applied.requested_slots = current_content_plan.requested_slot_count
+		report.applied.effective_budget = current_content_plan.effective_slot_budget
+		report.applied.selected_slots = current_content_plan.selected_slots.size()
+		report.applied["content_error"] = current_content_plan.generation_error
+		if current_content_plan.is_valid() and not current_runtime_content_report.is_empty():
+			report.applied.content_status = "RUNTIME_REJECTED" if current_runtime_content_report.has("error") else "CONSUMED"
+			if not current_runtime_content_report.has("error"):
+				report.applied.content = String(current_content_plan.profile_id)
+	var runtime := get_node_or_null("RuntimeContent")
+	if runtime != null:
+		for child in runtime.get_children():
+			if child is Enemy and not child.is_queued_for_deletion(): report.applied.live_enemies += 1
+	for key in ["patrol_rejected","invalid_payloads","navigation_rejected","unsupported"]:
+		report.applied.runtime_rejections[key] = current_runtime_content_report.get(key,[]).duplicate(true)
+	if report.applied.selected_slots != report.applied.effective_budget:
+		report.limitations.append("SELECTED_SLOTS_DIFFER_FROM_BUDGET")
+	return report
 
 
 func _rebuild_runtime_content(profile: ContentPlacementProfileResource) -> void:
