@@ -65,6 +65,19 @@ wall_margin_m = 0.35
 cover_size_high = Vector3(1.6, 2, 1.2)
 cover_size_medium = Vector3(1.8, 1.1, 0.9)
 corner_fraction = 0.32
+room_cover_candidates = Array[Dictionary]([{
+"id": "barracks_inner_north", "semantic": &"BARRACKS", "category": 1, "index": 0, "position_fraction": Vector2(0.2, -0.245)
+}, {
+"id": "barracks_inner_south", "semantic": &"BARRACKS", "category": 1, "index": 1, "position_fraction": Vector2(0.2, 0.245)
+}, {
+"id": "armory_inner_north", "semantic": &"ARMORY", "category": 1, "index": 0, "position_fraction": Vector2(0.275, -0.245)
+}, {
+"id": "armory_inner_south", "semantic": &"ARMORY", "category": 1, "index": 1, "position_fraction": Vector2(0.275, 0.245)
+}, {
+"id": "food_inner_north", "semantic": &"FOOD_STORAGE", "category": 1, "index": 0, "position_fraction": Vector2(0.275, -0.30625)
+}, {
+"id": "food_inner_south", "semantic": &"FOOD_STORAGE", "category": 1, "index": 1, "position_fraction": Vector2(0.275, 0.30625)
+}])
 distribution_cover_probability = 0.65
 max_covers_per_distribution = 1
 distribution_cover_candidates = Array[Dictionary]([{

@@ -1406,6 +1406,16 @@ func get_sector_profile_metrics() -> Dictionary:
 	# Expanded PROFILES diagnostics only; no permanent HUD text or AI mutation.
 	if current_room_environment_report.has("distribution"):
 		report.applied["distribution_covers"] = current_room_environment_report.distribution.duplicate(true)
+	if current_room_environment_report.has("rooms"):
+		report.applied["room_cover_candidates"] = current_room_environment_report.rooms.duplicate(true)
+		var diagnostic_player := get_node_or_null("Player")
+		var diagnostic_shape := diagnostic_player.get_node_or_null("CollisionShape3D") as CollisionShape3D if diagnostic_player != null else null
+		if diagnostic_shape != null and diagnostic_shape.shape is CapsuleShape3D and nav_ready:
+			for room in report.applied.room_cover_candidates:
+				var module := get_node("AssembledModules").get_node(NodePath(String(room.node))) as Node3D
+				for child in module.get_children():
+					if child is LogicalCover:
+						room.accessible_positions.append({"cover":String(child.name),"category":LogicalCover.Category.keys()[child.category],"positions":preload("res://scripts/world/RoomEnvironmentBuilder.gd").room_access_positions(module,child,nav_region.get_navigation_map(),diagnostic_shape.shape)})
 	if current_content_plan != null:
 		report.applied["planning_profile"] = String(current_content_plan.profile_id)
 		report.applied["content_status"] = "PLANNED_PENDING_RUNTIME" if current_content_plan.is_valid() else "PLAN_REJECTED"

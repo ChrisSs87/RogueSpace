@@ -34,6 +34,9 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 		_build_distribution_covers(plan,module,profile,seed,location,report)
 		var family: String = profile.cover_family_by_semantic.get(String(id),"")
 		if family.is_empty() or plan.module_types[location.node_id] not in [&"ROOM",&"SIDE_ROOM"] or not plan.links.get(location.node_id,[]).is_empty(): continue
+		var room_audit := {"node":location.node_id,"semantic":id,"budget":mini(profile.max_covers_per_room,2),"examined":[],"functional":0,"decorative":0,"interior":0,"lateral":0,"accessible_positions":[],"los_posture":"INCOMPLETE","dynamic_tactical":"INCOMPLETE"}
+		if not report.has("rooms"): report["rooms"] = []
+		var occupied: Array[AABB] = []
 		var first_high := rng.randi_range(0,1) == 0
 		for index in mini(profile.max_covers_per_room,2):
 			var high := first_high if index == 0 else not first_high
@@ -46,6 +49,11 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 			if variant != null: size = variant.size
 			# Positive X avoids the authored room guard route on negative X.
 			var center := Vector3(dimensions.x*profile.corner_fraction, size.y*0.5, dimensions.y*profile.corner_fraction*(-1 if index == 0 else 1))
+			var chosen := _room_candidate(plan.module_definitions[location.node_id],dimensions,size,profile,seed,location,index,occupied,room_audit,category)
+			var placement := "LATERAL"
+			if chosen.has("position"):
+				center = chosen.position
+				placement = "INTERIOR"
 			var bounds := AABB(center-size*0.5,size)
 			var safe := bounds.position.x >= profile.protected_axis_half_width_m and minf(absf(bounds.position.z),absf(bounds.end.z)) >= profile.protected_axis_half_width_m
 			safe = safe and bounds.end.x <= dimensions.x*0.5-profile.wall_margin_m and maxf(absf(bounds.position.z),absf(bounds.end.z)) <= dimensions.y*0.5-profile.wall_margin_m
@@ -62,11 +70,86 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 						if reserved.intersects_segment(previous,next) != null: safe = false
 						previous = next
 					if reserved.intersects_segment(previous,point) != null: safe = false
+			for previous in occupied:
+				if previous.grow(0.55).intersects(bounds): safe = false
+			room_audit.examined.append({"id":"selected_%d" % index,"position":center,"placement":placement,"accepted":safe,"reason":"" if safe else "reserved circulation/patrol/prop or footprint"})
 			if not safe:
 				report.rejected.append({"node":location.node_id,"index":index,"reason":"reserved circulation/patrol or footprint"})
 				continue
-			report.covers.append(_instantiate_cover(module,location,center,size,category,family,variant,"Cover_%d" % index))
+			occupied.append(bounds)
+			var row := _instantiate_cover(module,location,center,size,category,family,variant,"Cover_%d" % index)
+			row["placement"] = placement
+			report.covers.append(row)
+			room_audit["interior" if placement == "INTERIOR" else "lateral"] += 1
+			room_audit["decorative" if category == LogicalCover.Category.LOW else "functional"] += 1
+		report.rooms.append(room_audit)
 	return report
+
+
+## Bounded contextual alternatives. Reuse the same cross, spawn, patrol and
+## wall reserves as hubs; never consumes population or legacy category RNG.
+static func _room_candidate(definition: ModuleDefinitionResource, dimensions: Vector2, size: Vector3, profile: RoomEnvironmentProfileResource, seed: int, location: DungeonSemanticLocation, index: int, occupied: Array[AABB], audit: Dictionary, category: int = -1) -> Dictionary:
+	var candidates: Array[Dictionary] = []
+	for candidate in profile.room_cover_candidates:
+		if candidate.get("semantic") != location.definition.semantic_id: continue
+		if candidate.has("category") and category >= 0 and int(candidate.category) != category: continue
+		if candidate.has("index") and int(candidate.index) != index: continue
+		candidates.append(candidate)
+	if candidates.is_empty(): return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = String("%s/%s/%s/room/%s" % [seed,profile.stable_id,location.node_id,index]).hash()
+	var offset := rng.randi_range(0,candidates.size()-1)
+	for step in candidates.size():
+		var candidate := candidates[(offset+step)%candidates.size()]
+		var fraction: Vector2 = candidate.get("position_fraction",Vector2.ZERO)
+		var center := Vector3(fraction.x*dimensions.x,size.y*0.5,fraction.y*dimensions.y)
+		var bounds := AABB(center-size*0.5,size)
+		var reason := _distribution_rejection(definition,dimensions,bounds,profile)
+		for previous in occupied:
+			if previous.grow(0.55).intersects(bounds): reason = "another accepted cover reserve"
+		audit.examined.append({"id":candidate.get("id",""),"position":center,"placement":"INTERIOR","accepted":reason.is_empty(),"reason":reason})
+		if reason.is_empty(): return {"position":center}
+	return {}
+
+
+## Read-only diagnostic after the existing bake, never placement/AI lookahead.
+## Four bounded pockets around a prop, checked with the real Player capsule
+## and swept NavMesh paths from/to the reserved room center. Static geometry
+## only: moving guard occupancy and temporal evasion remain INCOMPLETE.
+static func room_access_positions(module: Node3D, cover: LogicalCover, map: RID, capsule: CapsuleShape3D) -> Array:
+	var result: Array = []
+	if not map.is_valid() or NavigationServer3D.map_get_iteration_id(map) == 0 or capsule == null: return result
+	var shape := cover.get_child(0) as CollisionShape3D
+	if shape == null or not shape.shape is BoxShape3D: return result
+	var size: Vector3 = shape.shape.size
+	var offsets := [Vector3(size.x*0.5+0.55,0,0),Vector3(-size.x*0.5-0.55,0,0),Vector3(0,0,size.z*0.5+0.55),Vector3(0,0,-size.z*0.5-0.55)]
+	var dimensions: Vector2 = module.get_meta("footprint_size")
+	var start := NavigationServer3D.map_get_closest_point(map,module.global_position)
+	var space := module.get_world_3d().direct_space_state
+	for offset in offsets:
+		var local: Vector3 = cover.position+offset
+		local.y = 0.0
+		var world := module.to_global(local)
+		var projected := NavigationServer3D.map_get_closest_point(map,world)
+		var reason := ""
+		if absf(local.x)+capsule.radius > dimensions.x*0.5 or absf(local.z)+capsule.radius > dimensions.y*0.5: reason = "pocket outside footprint"
+		if Vector2(world.x-projected.x,world.z-projected.z).length() > 0.12: reason = "pocket outside navigation"
+		var path := NavigationServer3D.map_get_path(map,start,projected,true)
+		var reverse := NavigationServer3D.map_get_path(map,projected,start,true)
+		if path.size() < 2 or reverse.size() < 2: reason = "no bidirectional route"
+		var query := PhysicsShapeQueryParameters3D.new()
+		query.shape = capsule
+		query.collision_mask = 1
+		query.margin = 0.0
+		for route in [path,reverse]:
+			for index in range(route.size()-1):
+				var from: Vector3 = route[index]+Vector3.UP*(capsule.height*0.5+0.04)
+				var to: Vector3 = route[index+1]+Vector3.UP*(capsule.height*0.5+0.04)
+				query.transform = Transform3D(Basis.IDENTITY,from)
+				query.motion = to-from
+				if not space.intersect_shape(query).is_empty() or space.cast_motion(query)[0] < 1.0: reason = "capsule route blocked"
+		result.append({"local":local,"world":projected,"accessible":reason.is_empty(),"reason":reason,"scope":"STATIC_BIDIRECTIONAL_CAPSULE_PATH"})
+	return result
 
 ## Shared existing physical/visual contract, used by room and opt-in candidates.
 static func _instantiate_cover(module: Node3D, location: DungeonSemanticLocation, center: Vector3, size: Vector3, category: int, family: String, variant: RoomCoverVariantResource, node_name: String) -> Dictionary:
