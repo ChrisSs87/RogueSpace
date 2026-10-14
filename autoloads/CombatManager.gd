@@ -64,6 +64,12 @@ func _on_ambush_ready(enemy: Node3D, _player_ref: Node3D) -> void:
 	_ambush_enemy = enemy
 
 
+## Only the unconsumed intent of a cancelled candidate, never an active bonus.
+func discard_pending_ambush(enemy: Node3D) -> void:
+	if not _in_combat and _ambush_enemy == enemy:
+		_ambush_enemy = null
+
+
 func _on_combat_ready(player: Node3D, enemies: Array) -> void:
 	if _in_combat or enemies.is_empty():
 		return

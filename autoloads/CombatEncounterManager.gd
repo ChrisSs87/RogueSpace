@@ -49,8 +49,8 @@ extends Node
 @export var global_encounter_timeout_sec: float = 10.0
 ## Margen pequeño para redondeo físico alrededor de combat_distance.
 @export var combat_distance_tolerance_m: float = 0.35
-## Banda provisional cómoda para primera persona/Cardboard. Los recursos
-## siguen definiendo el objetivo ideal (hoy 2.5 m); esta banda decide READY.
+## Banda preferida para los slots (ideal Resource: 2.5 m). READY puede aceptar
+## una posición actual más cercana, sin interpenetración, con contacto/LOS/nav.
 @export var combat_min_distance_m: float = 2.0
 @export var combat_max_distance_m: float = 3.0
 
@@ -86,6 +86,9 @@ var _approach_timer: float = -1.0
 ## Participantes iniciados por emboscada: no requieren contacto sensorial al
 ## cerrar la ventana, porque Ambush es su propia ruta legítima a Encounter.
 var _ambush_candidates: Array = []
+var _positioning_player: WeakRef
+var _player_was_frozen := false
+var _diagnostic := {"result":"NONE","participants":[],"excluded":[]}
 
 
 ## true desde que se cierra la ventana de detección hasta que termina el
@@ -96,7 +99,7 @@ func is_encounter_active() -> bool:
 
 
 func _process(delta: float) -> void:
-	if ExplorationState.is_suspended(): return
+	if ExplorationState.is_suspended() and not ExplorationState.can_update_positioning(self): return
 	if _window_timer >= 0.0:
 		_window_timer -= delta
 		if _window_timer <= 0.0:
@@ -123,6 +126,8 @@ func request_encounter_candidate(enemy: Node3D, from_ambush: bool = false) -> in
 		return REJECTED_FULL
 
 	_pending_enemies.append(enemy)
+	if _pending_enemies.size() == 1:
+		_diagnostic = {"result":"COLLECTING","participants":[],"excluded":[]}
 	if from_ambush:
 		_ambush_candidates.append(enemy)
 
@@ -140,8 +145,7 @@ func withdraw_encounter_candidate(enemy: Node3D) -> void:
 	if _encounter_locked or enemy not in _pending_enemies:
 		return
 	_pending_enemies.erase(enemy)
-	if enemy.has_method("release_encounter_candidate"):
-		enemy.release_encounter_candidate()
+	_release_candidate(enemy)
 	if _pending_enemies.is_empty():
 		_cancel_pending_encounter()
 
@@ -163,6 +167,8 @@ func _lock_encounter() -> void:
 	if valid_enemies.is_empty():
 		_cancel_pending_encounter()
 		return
+	for enemy in _pending_enemies:
+		if enemy not in valid_enemies: _release_candidate(enemy)
 
 	_pending_enemies = valid_enemies
 	_encounter_locked = true
@@ -176,6 +182,13 @@ func _lock_encounter() -> void:
 		return
 
 	_approach_timer = 0.0
+	_positioning_player = weakref(player)
+	_player_was_frozen = player.get("is_frozen") == true
+	if player.has_method("freeze_for_combat"): player.freeze_for_combat()
+	ExplorationState.set_encounter_positioning(true)
+	_diagnostic.result = "POSITIONING"
+	for enemy in valid_enemies:
+		_diagnostic.participants.append({"id":enemy.get_instance_id(),"distance":enemy.global_position.distance_to(player.global_position),"ambush":enemy in _ambush_candidates})
 
 	var angles: Array = _compute_natural_angles(valid_enemies, player)
 
@@ -189,18 +202,50 @@ func _is_valid_candidate(enemy: Node) -> bool:
 	# tick de percepción puede tener hasta perception_interval_sec de antigüedad.
 	# Así, cortar FOV/LOS o el ruido antes del lock realmente cancela el
 	# encuentro, en vez de depender de un valor de debug o de un estado viejo.
-	return is_instance_valid(enemy) and (enemy in _ambush_candidates or (enemy.has_method("refresh_encounter_contact_valid") and enemy.refresh_encounter_contact_valid()))
+	var player := get_tree().get_first_node_in_group("player") as Node3D
+	return is_instance_valid(enemy) and (enemy in _ambush_candidates or (enemy.has_method("has_confirmed_visual_contact") and enemy.has_confirmed_visual_contact(player)))
 
 
 func _cancel_pending_encounter() -> void:
 	for enemy in _pending_enemies:
-		if is_instance_valid(enemy) and enemy.has_method("release_encounter_candidate"):
-			enemy.release_encounter_candidate()
+		# Reset after effective COMBAT is not a cancelled APPROACH. Preserve
+		# the no-automatic-reentry guard for surviving former combatants.
+		_release_candidate(enemy,_approach_timer >= 0.0)
 	_pending_enemies = []
+	_window_timer = -1.0
 	_ambush_candidates = []
 	_encounter_locked = false
 	_enemies_in_position = []
 	_approach_timer = -1.0
+	_end_positioning(true)
+	if _diagnostic.result in ["COLLECTING","POSITIONING"]: _diagnostic.result = "CANCELLED_NO_SAFE_PARTICIPANT"
+
+
+func _end_positioning(cancelled: bool) -> void:
+	ExplorationState.set_encounter_positioning(false)
+	var player: Node = _positioning_player.get_ref() if _positioning_player != null else null
+	if cancelled and player != null and player.has_method("unfreeze_after_combat") and not _player_was_frozen and not ExplorationState.is_suspended():
+		player.unfreeze_after_combat()
+	_positioning_player = null
+
+
+## Expandable debug consumer; no additional permanent floating/HUD text.
+func get_debug_encounter_diagnostic() -> Dictionary:
+	return _diagnostic.duplicate(true)
+
+
+## One release boundary for withdrawal, filtering, abort and reset. A ready
+## actor still owns positioning until combat starts; release that ownership too.
+func _release_candidate(enemy: Node, total_approach_cancelled: bool = false) -> void:
+	_ambush_candidates.erase(enemy)
+	if not is_instance_valid(enemy): return
+	if _diagnostic.result in ["COLLECTING","POSITIONING"]:
+		_diagnostic.excluded.append({"id":enemy.get_instance_id(),"reason":enemy.get_debug_combat_position_reason() if enemy.has_method("get_debug_combat_position_reason") else "CONTACT_OR_PHYSICAL_POSITION_INVALID"})
+	CombatManager.discard_pending_ambush(enemy)
+	if enemy.has_method("has_combat_positioning") and enemy.has_combat_positioning() and enemy.has_method("abort_combat_approach"):
+		enemy.abort_combat_approach(total_approach_cancelled)
+	elif enemy.has_method("release_encounter_candidate"):
+		enemy.release_encounter_candidate()
 
 
 func get_debug_join_window_remaining() -> float:
@@ -281,18 +326,22 @@ func _validate_approach_participants() -> void:
 	for enemy in _pending_enemies:
 		if is_instance_valid(enemy) and _is_encounter_viable(enemy, player):
 			retained.append(enemy)
-		elif is_instance_valid(enemy) and enemy.has_method("abort_combat_approach"):
-			enemy.abort_combat_approach()
+	for enemy in _pending_enemies:
+		if enemy not in retained: _release_candidate(enemy,retained.is_empty())
 	_pending_enemies = retained
 	_enemies_in_position = _enemies_in_position.filter(func(enemy): return enemy in _pending_enemies)
 	if _pending_enemies.is_empty():
 		_cancel_pending_encounter()
+	elif _enemies_in_position.size() == _pending_enemies.size():
+		# A discarded participant cannot make already-ready survivors wait for
+		# an event they have emitted once, or for the global safety timeout.
+		_start_combat_now()
 
 
 func _resolve_approach_timeout() -> void:
 	push_warning("CombatEncounterManager: timeout de APPROACH; verificando posiciones, sin forzar combate.")
 	_validate_approach_participants()
-	if not _encounter_locked:
+	if not _encounter_locked or _approach_timer < 0.0:
 		return
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	var ready: Array = _pending_enemies.filter(func(enemy): return _is_combat_ready(enemy, player))
@@ -300,8 +349,7 @@ func _resolve_approach_timeout() -> void:
 	# no DROP parcial de un encuentro que continúa con otros combatientes.
 	var total_approach_cancelled := ready.is_empty()
 	for enemy in _pending_enemies:
-		if enemy not in ready and is_instance_valid(enemy) and enemy.has_method("abort_combat_approach"):
-			enemy.abort_combat_approach(total_approach_cancelled)
+		if enemy not in ready: _release_candidate(enemy,total_approach_cancelled)
 	_pending_enemies = ready
 	_enemies_in_position = ready
 	if ready.is_empty():
@@ -328,8 +376,7 @@ func _start_combat_now() -> void:
 	# an Enemy that still owns a COMBAT freeze/slot outside CombatManager.
 	var total_approach_cancelled := valid_enemies.is_empty()
 	for enemy in _pending_enemies:
-		if enemy not in valid_enemies and is_instance_valid(enemy) and enemy.has_method("abort_combat_approach"):
-			enemy.abort_combat_approach(total_approach_cancelled)
+		if enemy not in valid_enemies: _release_candidate(enemy,total_approach_cancelled)
 	if valid_enemies.is_empty():
 		_cancel_pending_encounter()
 		return
@@ -340,15 +387,15 @@ func _start_combat_now() -> void:
 	if player != null and player.has_method("freeze_for_combat"):
 		player.freeze_for_combat()
 
+	_diagnostic.result = "COMBAT_STARTED"
+	_diagnostic.participants = []
+	for enemy in valid_enemies:
+		_diagnostic.participants.append({"id":enemy.get_instance_id(),"admission_distance":enemy.global_position.distance_to(player.global_position),"position":"CURRENT_SAFE_POSITION"})
 	EventBus.combat_ready.emit(player, valid_enemies)
+	_end_positioning(false)
 
 
 ## Llamado por CombatManager cuando un combate termina (victoria). Sin esto,
 ## el manager quedaría bloqueado para siempre después del primer encuentro.
 func reset() -> void:
-	_pending_enemies = []
-	_window_timer = -1.0
-	_encounter_locked = false
-	_enemies_in_position = []
-	_approach_timer = -1.0
-	_ambush_candidates = []
+	_cancel_pending_encounter()

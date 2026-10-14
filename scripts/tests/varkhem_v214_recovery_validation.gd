@@ -135,6 +135,18 @@ func _sound_contract() -> void:
 	_check(starts == 0 and endings == 0 and rewards == 0 and noise_events == 1,"unexpected combat/reward/noise duplication")
 	print("V214_SOUND_EVIDENCE="+JSON.stringify({"origin":str(source),"enemy":str(enemy.global_position),"investigated":reached,"returned":returned,"vision":enemy._last_vision_result,"pending":CombatEncounterManager.get_debug_pending_count()}))
 
+func _visual_confirmation_bound(actor: Enemy) -> float:
+	var capability := actor._get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
+	if actor._is_within_proximity_override(player): capability = 1.0
+	if capability <= 0.0:
+		_check(false,"FIXTURE_CONFIGURATION: configured light cannot confirm vision","FAIL_FIXTURE")
+		return 0.0
+	# Normal visual ticks accumulate interval * effective light capability.
+	# Do not rely on ALERT moving into proximity override to shorten the test.
+	var interval := actor.enemy_resource.perception_interval_sec
+	return ceili(actor.enemy_resource.detection_time_sec/(interval*capability))*interval
+
+
 func _vision_contract() -> void:
 	# A separate real participant starts combat through ordinary perception,
 	# admission and approach. The observer is out of range, facing empty space.
@@ -144,7 +156,9 @@ func _vision_contract() -> void:
 	print("V214_VISION_PARTICIPANT_PREFLIGHT="+JSON.stringify(_visual_fixture_evidence(participant)))
 	_check(fixture_ready,"FIXTURE_CONFIGURATION: participant visual conditions unavailable","FAIL_FIXTURE")
 	if not fixture_ready: return
-	var started := await _wait_until(func(): return CombatManager.get_combatant_count() == 1 and ExplorationState.is_suspended(),CombatEncounterManager.join_window_sec+RESOURCE.combat_approach_timeout_sec+RESOURCE.detection_time_sec)
+	var confirmation_bound := _visual_confirmation_bound(participant)
+	if not errors.is_empty(): return
+	var started := await _wait_until(func(): return CombatManager.get_combatant_count() == 1 and ExplorationState.is_suspended(),CombatEncounterManager.join_window_sec+RESOURCE.combat_approach_timeout_sec+confirmation_bound)
 	_check(started and CombatManager.get_combatant_node(0) == participant,"natural combat did not start")
 	if not started: return
 	var suspended_transform := enemy.global_transform
@@ -163,7 +177,10 @@ func _vision_contract() -> void:
 	player.position = Vector3(0,0.86,-2)
 	var conditions_valid := true
 	var detected := false
-	var deadline := Time.get_ticks_msec()+int((RESOURCE.detection_time_sec+RESOURCE.perception_interval_sec*3)*1000)
+	confirmation_bound = _visual_confirmation_bound(enemy)
+	if not errors.is_empty(): return
+	print("V214_VISION_TIMING="+JSON.stringify({"confirmation_bound":confirmation_bound,"light":LightingManager.get_light_level_at(player.global_position),"interval":RESOURCE.perception_interval_sec,"detection_threshold":RESOURCE.detection_time_sec}))
+	var deadline := Time.get_ticks_msec()+int((confirmation_bound+RESOURCE.perception_interval_sec*3)*1000)
 	while Time.get_ticks_msec() < deadline:
 		await get_tree().physics_frame
 		var evidence := _visual_fixture_evidence(enemy)

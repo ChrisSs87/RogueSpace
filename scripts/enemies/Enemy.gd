@@ -80,6 +80,8 @@ var _encounter_debug_state: String = "NONE"
 var _encounter_owns_enemy: bool = false
 var _excluded_from_active_encounter: bool = false
 var _must_lose_contact_before_reentry: bool = false
+var _encounter_admission_reason := "NONE"
+var _combat_position_reason := "NOT_EVALUATED"
 ## Sólo la cancelación TOTAL por timeout permite recuperarse al alcanzar la
 ## banda de combate. DROP parcial conserva pérdida de contacto obligatoria.
 var _cancelled_approach_reentry_pending: bool = false
@@ -238,7 +240,7 @@ func _apply_debug_color() -> void:
 # --- Movimiento y patrulla -------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	if ExplorationState.is_suspended():
+	if ExplorationState.is_suspended() and not ExplorationState.can_update_positioning(self):
 		velocity = Vector3.ZERO
 		return
 	_sync_navigation_anchor()
@@ -250,8 +252,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
-	_time_since_detection += delta
-	_check_lose_target_timeout()
+	if not ExplorationState.is_suspended():
+		_time_since_detection += delta
+		_check_lose_target_timeout()
 
 	var position_before_move: Vector3 = global_position
 	match _state:
@@ -262,9 +265,14 @@ func _physics_process(delta: float) -> void:
 			# solo existe después de alcanzar el punto y empezar búsqueda.
 			if not _searching_at_last_known:
 				_debug_requested_speed_mps = _current_speed_mps()
-				var reached_alert_target := _move_toward_point(_last_known_player_position, _current_speed_mps(), delta)
-				if reached_alert_target or _debug_nav_str == "NO PATH":
-					_begin_last_known_search()
+				# Visible but not yet confirmed: do not run into Player while
+				# exposure accumulates. Lost vision/SOUND still travel to LAST KNOWN.
+				if _last_vision_result == VISION_ALERT and _last_known_source == "VISION":
+					_move_toward_point(_last_known_player_position, _current_speed_mps(), delta, enemy_resource.combat_distance_tiles * GameBalance.tile_size_m)
+				else:
+					var reached_alert_target := _move_toward_point(_last_known_player_position, _current_speed_mps(), delta)
+					if reached_alert_target or _debug_nav_str == "NO PATH":
+						_begin_last_known_search()
 			else:
 				_process_local_search(delta)
 		State.CHASE:
@@ -276,7 +284,7 @@ func _physics_process(delta: float) -> void:
 			velocity.z = 0.0
 
 	# APPROACH can synchronously start combat inside this very callback.
-	if ExplorationState.is_suspended():
+	if ExplorationState.is_suspended() and not ExplorationState.can_update_positioning(self):
 		velocity = Vector3.ZERO
 		return
 	move_and_slide()
@@ -987,6 +995,11 @@ func _enter_chase() -> void:
 ## automáticamente después de CombatEncounterManager.reset(); debe perder el
 ## rastro y detectar de nuevo para abrir/entrar a otro encuentro válido.
 func _try_register_encounter_candidate() -> void:
+	# A FULL rejection before lock does not own/exclude an actor. Retry only
+	# from this normal contact path when admission actually has capacity again.
+	# Partial DROP's must-lose-contact guard remains independent and unchanged.
+	if _encounter_join_closed and not _excluded_from_active_encounter and not _must_lose_contact_before_reentry and not CombatEncounterManager.is_encounter_active() and CombatEncounterManager.get_debug_pending_count() < CombatEncounterManager.max_enemies_per_combat:
+		_encounter_join_closed = false
 	# Un DROP sólo bloquea reingreso mientras siga vivo el mismo encuentro;
 	# al terminarlo el próximo contacto vuelve a habilitar admisión normal.
 	if not CombatEncounterManager.is_encounter_active() and _excluded_from_active_encounter:
@@ -1007,9 +1020,11 @@ func _try_register_encounter_candidate() -> void:
 
 	var join_result: int = CombatEncounterManager.request_encounter_candidate(self)
 	if join_result == CombatEncounterManager.CANDIDATE_ACCEPTED:
+		_encounter_admission_reason = "ACCEPTED"
 		_has_requested_encounter = true
 		_encounter_debug_state = "CANDIDATE"
 	else:
+		_encounter_admission_reason = "WINDOW_CLOSED" if join_result == CombatEncounterManager.REJECTED_CLOSED else "CAPACITY_FULL"
 		_encounter_join_closed = true
 		# Un rechazo pertenece al encounter activo/cerrado, igual que DROPPED:
 		# mientras viva no puede reencolarse, pero reset() le devuelve
@@ -1080,14 +1095,21 @@ func refresh_encounter_contact_valid() -> bool:
 		_encounter_contact_valid = false
 		return false
 
+	var confirmed_visual := has_confirmed_visual_contact(player)
+	var has_hearing_contact: bool = not confirmed_visual and _has_recent_sound_contact()
+	_encounter_contact_valid = confirmed_visual or has_hearing_contact
+	return _encounter_contact_valid
+
+
+## Fresh geometry + the existing sustained exposure. SOUND may investigate,
+## but is not visual confirmation and cannot by itself admit ordinary combat.
+func has_confirmed_visual_contact(player: Node3D) -> bool:
+	if player == null or enemy_resource == null: return false
 	var has_visual_baseline: bool = _passes_vision_baseline(player)
 	var capability := _get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
 	if _is_within_proximity_override(player): capability = 1.0
 	var minimum := enemy_resource.visual_suspicion_min_capability if enemy_resource.visual_suspicion_enabled else 0.0
-	var confirmed_visual := has_visual_baseline and _sight_timer >= enemy_resource.detection_time_sec and capability >= minimum
-	var has_hearing_contact: bool = not confirmed_visual and _has_recent_sound_contact()
-	_encounter_contact_valid = confirmed_visual or has_hearing_contact
-	return _encounter_contact_valid
+	return has_visual_baseline and _sight_timer >= enemy_resource.detection_time_sec and capability >= minimum
 
 
 func mark_encounter_joined() -> void:
@@ -1096,9 +1118,21 @@ func mark_encounter_joined() -> void:
 
 func release_encounter_candidate() -> void:
 	_has_requested_encounter = false
+	_ambush_candidate_registered = false
+	_encounter_admission_reason = "RELEASED"
 	_encounter_contact_valid = false
 	_encounter_debug_state = "NONE"
 	_encounter_owns_enemy = false
+
+
+func get_debug_encounter_admission_reason() -> String:
+	if _must_lose_contact_before_reentry: return "TOTAL_CANCEL_WAIT_SAFE_POSITION" if _cancelled_approach_reentry_pending else "PARTIAL_DROP_WAIT_CONTACT_LOSS"
+	if _excluded_from_active_encounter: return "EXCLUDED_ACTIVE_ENCOUNTER"
+	return _encounter_admission_reason
+
+
+func get_debug_combat_position_reason() -> String:
+	return _combat_position_reason
 
 
 func get_debug_state_name() -> String:
@@ -1168,6 +1202,10 @@ func get_debug_encounter_state() -> String:
 
 
 func get_debug_has_combat_positioning() -> bool:
+	return has_combat_positioning()
+
+
+func has_combat_positioning() -> bool:
 	return _encounter_owns_enemy or _target_player != null
 
 
@@ -1403,7 +1441,7 @@ func _compute_slot_target_position() -> Vector3:
 	return global_position
 
 
-func _is_valid_combat_slot(candidate: Vector3, player_pos: Vector3) -> bool:
+func _is_valid_combat_slot(candidate: Vector3, player_pos: Vector3, preferred_band: bool = true) -> bool:
 	var map := get_world_3d().get_navigation_map()
 	if NavigationServer3D.map_get_iteration_id(map) == 0:
 		return false
@@ -1423,20 +1461,22 @@ func _is_valid_combat_slot(candidate: Vector3, player_pos: Vector3) -> bool:
 	var path := NavigationServer3D.map_get_path(map, NavigationServer3D.map_get_closest_point(map, global_position), projected, true)
 	if path.size() < 2:
 		return false
-	if candidate.distance_to(player_pos) < CombatEncounterManager.combat_min_distance_m or candidate.distance_to(player_pos) > CombatEncounterManager.combat_max_distance_m:
+	# Ideal slots retain the preferred band. A safe CURRENT position may be
+	# closer; geometry/actor clearance, not an artificial retreat, decides READY.
+	if (preferred_band and candidate.distance_to(player_pos) < CombatEncounterManager.combat_min_distance_m) or candidate.distance_to(player_pos) > CombatEncounterManager.combat_max_distance_m:
 		return false
 	if not _has_clear_line(candidate + Vector3.UP, player_pos + Vector3.UP):
 		return false
 	return _has_capsule_clearance(candidate)
 
 
-func _has_capsule_clearance(position: Vector3) -> bool:
+func _has_capsule_clearance(position: Vector3, additional_mask: int = 0) -> bool:
 	if collision_shape == null or collision_shape.shape == null:
 		return false
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = collision_shape.shape
 	query.transform = Transform3D(global_transform.basis, position)
-	query.collision_mask = WORLD_COLLISION_MASK
+	query.collision_mask = WORLD_COLLISION_MASK | additional_mask
 	query.exclude = [get_rid()]
 	var overlaps := get_world_3d().direct_space_state.intersect_shape(query, 16)
 	for overlap in overlaps:
@@ -1469,33 +1509,68 @@ func _finish_combat_approach() -> void:
 
 
 func is_combat_position_valid(player: Node3D, tolerance_m: float) -> bool:
+	_combat_position_reason = "MISSING_PLAYER_OR_RESOURCE"
 	if player == null or enemy_resource == null:
 		return false
 	# A player-initiated, already validated ambush is not an enemy sensory
-	# acquisition. Ordinary encounters require fresh confirmed vision/SOUND.
+	# acquisition. Ordinary encounters require fresh confirmed vision, not SOUND.
 	var admitted_ambush := enemy_resource.allow_player_ambush and _ambush_candidate_registered
-	if not admitted_ambush and not refresh_encounter_contact_valid():
+	_combat_position_reason = "VISUAL_CONTACT_UNCONFIRMED"
+	if not admitted_ambush and not has_confirmed_visual_contact(player):
 		return false
 	var head := player.get_node_or_null("Head") as Node3D
 	var target := head.global_position if head != null else player.global_position
+	_combat_position_reason = "LOS_OR_COVER_BLOCKED"
 	# Logical HIGH/MEDIUM cannot be bypassed by a short visual model or SOUND.
 	if not _has_clear_vision_line(get_vision_origin(),target,player):
 		return false
-	# Reuse the same band/physical clearance/projection/LOS validator as slots,
-	# instead of returning READY by distance before that validator can run.
-	if not _is_valid_combat_slot(global_position,player.global_position):
+	# Reuse slot clearance/projection/LOS and maximum distance, without forcing
+	# retreat from an already-safe current close position.
+	_combat_position_reason = "POSITION_RANGE_GEOMETRY_OR_NAV"
+	if not _is_valid_combat_slot(global_position,player.global_position,false):
 		return false
+	var actor_mask := collision_layer
+	if player is CollisionObject3D: actor_mask |= player.collision_layer
+	_combat_position_reason = "BODY_CLEARANCE"
+	if not _has_capsule_clearance(global_position,actor_mask): return false
 	var map := get_world_3d().get_navigation_map()
 	var from := NavigationServer3D.map_get_closest_point(map,global_position)
 	var to := NavigationServer3D.map_get_closest_point(map,player.global_position)
-	if Vector2(to.x-player.global_position.x,to.z-player.global_position.z).length() > 0.12:
+	_combat_position_reason = "PLAYER_NAV_ENDPOINT"
+	if not _player_navigation_endpoint_valid(player,to):
 		return false
-	return NavigationServer3D.map_get_path(map,from,to,true).size() >= 2
+	_combat_position_reason = "NO_NAV_PATH"
+	if NavigationServer3D.map_get_path(map,from,to,true).size() < 2: return false
+	_combat_position_reason = "CURRENT_SAFE_POSITION"
+	return true
+
+
+## Player's radius .4 can legally stand nearer a wall than the bake's .55
+## inset. Keep the original .12 check by default; a larger discrepancy must
+## fit the real Player footprint AND have a collision-free capsule bridge.
+## No projection through walls, changed navigation tolerances or fake paths.
+func _player_navigation_endpoint_valid(player: Node3D, projected: Vector3) -> bool:
+	var error := Vector2(projected.x-player.global_position.x,projected.z-player.global_position.z).length()
+	if error <= 0.12: return true
+	if not player is CharacterBody3D: return false
+	var shape := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if shape == null or not shape.shape is CapsuleShape3D or error > (shape.shape as CapsuleShape3D).radius: return false
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape.shape
+	query.transform = shape.global_transform
+	# Separate normal resting floor contact by the body's own safe margin.
+	query.transform.origin.y += player.safe_margin * 2.0
+	query.motion = Vector3(projected.x-player.global_position.x,0,projected.z-player.global_position.z)
+	query.collision_mask = WORLD_COLLISION_MASK
+	query.exclude = [player.get_rid(),get_rid()]
+	query.margin = 0.0
+	var space := get_world_3d().direct_space_state
+	return space.intersect_shape(query).is_empty() and space.cast_motion(query)[0] >= 1.0
 
 
 func is_encounter_still_viable(player: Node3D, tolerance_m: float) -> bool:
-	# Un participante demasiado cerca sigue siendo recuperable: debe poder
-	# retroceder a la banda. Uno lejos y sin contacto mantiene la regla de
+	# Un participante cercano puede estar listo sin retroceder, si supera
+	# contacto/geometría. Uno lejos y sin contacto mantiene la regla de
 	# escape y puede ser descartado por el manager.
 	if player == null:
 		return false
@@ -1515,6 +1590,7 @@ func abort_combat_approach(total_approach_cancelled: bool = false) -> void:
 	_must_lose_contact_before_reentry = true
 	_cancelled_approach_reentry_pending = total_approach_cancelled
 	_has_requested_encounter = false
+	_ambush_candidate_registered = false
 	_encounter_join_closed = _excluded_from_active_encounter
 	_encounter_debug_state = "DROPPED"
 	if _encounter_contact_valid:
@@ -1573,9 +1649,9 @@ func _update_debug_label() -> void:
 		text += "\nMOVEMENT SOURCE: %s" % movement_source
 		if _encounter_owns_enemy and _state == State.APPROACH and _target_player != null:
 			var combat_distance := global_position.distance_to(_target_player.global_position)
-			var positioning := "VALID" if combat_distance >= CombatEncounterManager.combat_min_distance_m and combat_distance <= CombatEncounterManager.combat_max_distance_m else ("TOO CLOSE" if combat_distance < CombatEncounterManager.combat_min_distance_m else "TOO FAR")
+			var positioning := "PREFERRED" if combat_distance >= CombatEncounterManager.combat_min_distance_m and combat_distance <= CombatEncounterManager.combat_max_distance_m else ("CLOSE: PHYSICS REQUIRED" if combat_distance < CombatEncounterManager.combat_min_distance_m else "TOO FAR")
 			text += "\nCOMBAT DIST: %.1f" % combat_distance
-			text += "\nVALID BAND: %.1f-%.1f" % [CombatEncounterManager.combat_min_distance_m, CombatEncounterManager.combat_max_distance_m]
+			text += "\nPREFERRED BAND: %.1f-%.1f" % [CombatEncounterManager.combat_min_distance_m, CombatEncounterManager.combat_max_distance_m]
 			text += "\nPOSITIONING: %s" % positioning
 		text += "\nNAV: %s" % _debug_nav_str
 		text += "\nNAV TARGET: %s" % _debug_nav_target_str

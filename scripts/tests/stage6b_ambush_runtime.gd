@@ -3,6 +3,14 @@ extends Node3D
 const ENEMY_SCENE := preload("res://scenes/enemies/Enemy.tscn")
 const HORVEX := preload("res://resources/enemies/xenomorfo.tres")
 
+## Observe the real synchronous boundary: close READY can finish APPROACH
+## before the next rendered sample. No overrides of AI/senses/movement.
+class ApproachObserver extends "res://scripts/enemies/Enemy.gd":
+	signal approach_entered
+	func begin_combat_approach(player: Node3D, slot_angle_deg: float = 0.0) -> void:
+		super.begin_combat_approach(player,slot_angle_deg)
+		approach_entered.emit()
+
 var stealth_ticks := 0
 var stealth_broken := false
 var zone_entries := 0
@@ -24,7 +32,12 @@ func _ready() -> void:
 	var original: Enemy = fortress.get_node("InitialMelee")
 	original.perception_timer.stop(); original.set_physics_process(false)
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
+	enemy.set_script(ApproachObserver)
 	enemy.enemy_resource = HORVEX
+	enemy.connect("approach_entered",func():
+		if approach_started:
+			approach_seen = enemy.get_debug_state_name() == "APPROACH" and enemy.has_combat_positioning()
+			trace("APPROACH_ENTERED",enemy,player))
 	fortress.add_child(enemy)
 	enemy.global_position = Vector3(6.0, 1.0, 0.0)
 	enemy.rotation.y = 0.0

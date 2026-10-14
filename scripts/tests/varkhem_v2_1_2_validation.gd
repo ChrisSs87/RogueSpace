@@ -219,12 +219,24 @@ func _contact_lifecycle(stage: Node3D, player: Node3D, occluded := false) -> Dic
 	enemy.look_at(points[1],Vector3.UP)
 	player.global_position = enemy.global_position - enemy.global_basis.z*2.7
 	result.combat = false
-	for frame in 480:
+	var capability := enemy._get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
+	if enemy._is_within_proximity_override(player): capability = 1.0
+	if capability <= 0.0:
+		result.errors.append("FIXTURE_CONFIGURATION: light cannot confirm visual contact")
+		return result
+	var interval := enemy.enemy_resource.perception_interval_sec
+	var confirmation_bound := ceili(enemy.enemy_resource.detection_time_sec/(interval*capability))*interval
+	var combat_bound := confirmation_bound+CombatEncounterManager.join_window_sec+CombatEncounterManager.global_encounter_timeout_sec+interval*3
+	print("V212_CONTACT_TIMING="+JSON.stringify({"light":LightingManager.get_light_level_at(player.global_position),"capability":capability,"confirmation_bound":confirmation_bound,"combat_bound":combat_bound}))
+	var combat_deadline := Time.get_ticks_msec()+int(combat_bound*1000)
+	while Time.get_ticks_msec() < combat_deadline:
 		await get_tree().physics_frame
 		if CombatManager.get_combatant_count() > 0:
 			result.combat = true
 			break
-	if not result.combat: result.errors.append("real perception to combat failed")
+	if not result.combat:
+		print("V212_CONTACT_FAILURE="+JSON.stringify({"state":enemy.get_debug_state_name(),"contact":enemy._current_contact_kind,"vision":enemy._last_vision_result,"sight":enemy._sight_timer,"light":LightingManager.get_light_level_at(player.global_position),"capability":enemy._get_light_detection_capability(LightingManager.get_light_level_at(player.global_position)),"distance":enemy.global_position.distance_to(player.global_position),"ready":enemy.is_combat_position_valid(player,CombatEncounterManager.combat_distance_tolerance_m),"pending":CombatEncounterManager.get_debug_pending_count(),"window_remaining":CombatEncounterManager.get_debug_join_window_remaining(),"owner":enemy.get_debug_ai_owner(),"admission":enemy.get_debug_encounter_admission_reason(),"position":enemy.global_position,"player":player.global_position}))
+		result.errors.append("real perception to combat failed")
 	print("V212_CONTACT=%s" % JSON.stringify(result))
 	return result
 

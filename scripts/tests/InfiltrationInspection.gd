@@ -38,12 +38,17 @@ func _noise(_position: Vector3, radius: float, intensity: float) -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 	info.text = info.text.replace("V2.1.1", "V2.1.4")
-	info.text += "\nCOMBAT SUSPENDED" if ExplorationState.is_suspended() else "\nEXPLORATION ACTIVE"
+	if ExplorationState.can_update_positioning(CombatEncounterManager):
+		info.text += "\nPOSITIONING / EXPLORATION SUSPENDED"
+	else:
+		info.text += "\nCOMBAT SUSPENDED" if ExplorationState.is_suspended() else "\nEXPLORATION ACTIVE"
 	elapsed += delta
 	if not infiltration or elapsed < 0.2: return
 	elapsed = 0.0
 	var player: Node3D = stage.get_node("Player")
 	var lines: Array[String] = ["LIGHT %d/5 | NOISE %s" % [LightingManager.get_light_level_at(player.global_position),last_noise]]
+	var encounter := CombatEncounterManager.get_debug_encounter_diagnostic()
+	lines.append("ENC %s | IN %d / OUT %d" % [encounter.result,encounter.participants.size(),encounter.excluded.size()])
 	var root := stage.get_node_or_null("RuntimeContent")
 	var mesh := ImmediateMesh.new()
 	var material := StandardMaterial3D.new()
@@ -60,6 +65,7 @@ func _process(delta: float) -> void:
 			observed_states[key] = observed
 			lines.append("%s %s %.1fm | %s | %s" % [enemy.get_meta("patrol_kind",&"NONE"),state,enemy.global_position.distance_to(player.global_position),enemy.get_debug_ai_owner(),observed.transition])
 			lines.append("  %s | LAST %s | LOOK %s | MOVE %s" % [enemy.get_debug_stimulus_source(),enemy.get_debug_last_known_position(),-enemy.global_basis.z,enemy.get_debug_physical_heading()])
+			lines.append("  %s | POS %s" % [enemy.get_debug_encounter_admission_reason(),enemy.get_debug_combat_position_reason()])
 			var points: Array = enemy.get_meta("patrol_world_points",[])
 			if points.size() >= 2:
 				mesh.surface_begin(Mesh.PRIMITIVE_LINES,material)

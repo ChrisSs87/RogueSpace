@@ -142,8 +142,11 @@ func _ready() -> void:
 		if mode == "break" and barrier_added and not CombatEncounterManager.is_encounter_active(): break
 	if not probe:
 		if mode == "sound_open":
-			if combat_rows.size() != 1: errors.append("FAIL_PRODUCTION: valid audible clear-space encounter did not start once")
-			elif combat_rows[0].contact != "SOUND" or not combat_rows[0].los or not combat_rows[0].ready: errors.append("FAIL_PRODUCTION: invalid auditory combat admission")
+			# P0-R2 explicitly separates auditory investigation from confirmed
+			# visual admission. Keep real SOUND/contact coverage, not forced sight.
+			if not combat_rows.is_empty(): errors.append("FAIL_PRODUCTION: SOUND alone admitted combat")
+			if enemy._last_known_source != "SOUND" or not enemy._has_recent_sound_contact(): errors.append("FAIL_PRODUCTION: auditory investigation/contact lost")
+			if enemy.get_debug_state_name() not in ["ALERT","CHASE"]: errors.append("FAIL_PRODUCTION: missing species-specific auditory response")
 		elif mode == "late_drop":
 			var second_only := CombatManager.get_combatant_count() == 1 and CombatManager.get_combatant_node(0) == second
 			var released := enemy.get_debug_ai_owner() == "EXPLORATION" and enemy.get_debug_state_name() != "COMBAT" and enemy._encounter_debug_state == "DROPPED"

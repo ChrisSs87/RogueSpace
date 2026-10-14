@@ -21,6 +21,11 @@ func _observe(sandbox: Node3D, names: Array[String], phase: String) -> Dictionar
 		if suspended:
 			for enemy_name in names:
 				var actor: Enemy = sandbox.get_node(enemy_name)
+				# APPROACH now owns controlled presentation movement while normal
+				# exploration is paused. READY/COMBAT and all outsiders must freeze.
+				if ExplorationState.can_update_positioning(actor) and actor.get_debug_state_name() == "APPROACH":
+					frozen.erase(enemy_name)
+					continue
 				if not frozen.has(enemy_name): frozen[enemy_name] = {"transform":actor.global_transform,"space":PhysicsServer3D.body_get_space(actor.get_rid())}
 		await get_tree().physics_frame
 		var delta := get_physics_process_delta_time()
@@ -31,6 +36,9 @@ func _observe(sandbox: Node3D, names: Array[String], phase: String) -> Dictionar
 			var runtime := actor.get_patrol_runtime_debug()
 			if suspended:
 				row.suspended_sec += delta
+				if not frozen.has(enemy_name):
+					if not PhysicsServer3D.body_get_space(actor.get_rid()).is_valid(): failures.append("%s lost physics space during positioning" % enemy_name)
+					continue
 				var saved: Dictionary = frozen[enemy_name]
 				if actor.global_transform != saved.transform:
 					failures.append("%s moved during COMBAT" % enemy_name)

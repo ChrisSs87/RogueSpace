@@ -4,6 +4,7 @@ extends Node
 ## Card UI, combat/reward managers, rendering and the SceneTree remain active.
 var _combat := false
 var _reward := false
+var _positioning := false
 var _suspended := false
 var _actors := {}
 
@@ -17,6 +18,15 @@ func _ready() -> void:
 func is_suspended() -> bool:
 	return _suspended
 
+## Only the encounter coordinator and its owned actors may advance physical
+## presentation. Perception, patrols and unrelated exploration remain paused.
+func can_update_positioning(actor: Node) -> bool:
+	return _positioning and not _combat and not _reward and (actor == CombatEncounterManager or (actor.has_method("has_combat_positioning") and actor.has_combat_positioning()))
+
+func set_encounter_positioning(active: bool) -> void:
+	_positioning = active
+	_refresh()
+
 func register_actor(actor: Node) -> void:
 	var id := actor.get_instance_id()
 	_actors[id] = {"ref":weakref(actor),"since":-1,"timers":[]}
@@ -25,6 +35,7 @@ func register_actor(actor: Node) -> void:
 func reset_for_regeneration() -> void:
 	_combat = false
 	_reward = false
+	_positioning = false
 	_refresh()
 
 func _pause_actor(entry: Dictionary) -> void:
@@ -39,7 +50,7 @@ func _pause_actor(entry: Dictionary) -> void:
 		timer.paused = true
 
 func _refresh() -> void:
-	var next := _combat or _reward
+	var next := _combat or _reward or _positioning
 	if next == _suspended: return
 	_suspended = next
 	for id in _actors.keys():
