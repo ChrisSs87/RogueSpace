@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/core_p3b11_actor_registry_validation.gd" id="1"]
+
+[node name="P3B11ActorRegistryValidation" type="Node3D"]
+script = ExtResource("1")

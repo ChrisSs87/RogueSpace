@@ -28,9 +28,25 @@ func set_encounter_positioning(active: bool) -> void:
 	_refresh()
 
 func register_actor(actor: Node) -> void:
+	_prune_invalid_actors()
+	if not is_instance_valid(actor) or actor.is_queued_for_deletion(): return
 	var id := actor.get_instance_id()
-	_actors[id] = {"ref":weakref(actor),"since":-1,"timers":[]}
+	# The deferred callback binds only an ID, never a strong actor reference.
+	# A temporary detach is not destruction; dead-only cleanup preserves it.
+	var retired := _remove_invalid_actor.bind(id)
+	if not actor.tree_exited.is_connected(retired):
+		actor.tree_exited.connect(retired,CONNECT_DEFERRED)
+	# Repeated registration must not overwrite original timer pause ownership.
+	if not _actors.has(id):
+		_actors[id] = {"ref":weakref(actor),"since":-1,"timers":[]}
 	if _suspended: _pause_actor(_actors[id])
+
+func _remove_invalid_actor(id: int) -> void:
+	if _actors.has(id) and _actors[id].ref.get_ref() == null:
+		_actors.erase(id)
+
+func _prune_invalid_actors() -> void:
+	for id in _actors.keys(): _remove_invalid_actor(id)
 
 func reset_for_regeneration() -> void:
 	_combat = false
@@ -50,6 +66,8 @@ func _pause_actor(entry: Dictionary) -> void:
 		timer.paused = true
 
 func _refresh() -> void:
+	# Housekeeping is independent of transitions and cannot release an owner.
+	_prune_invalid_actors()
 	var next := _combat or _reward or _positioning
 	if next == _suspended: return
 	_suspended = next
