@@ -19,17 +19,30 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 		light.name = "RoomLogicalLight"
 		light.footprint = dimensions
 		light.addition = profile.room_light_addition
+		light.model = profile.coherent_light.duplicate(true) if profile.coherent_light != null else null
+		light.profile_id = String(profile.stable_id)
+		light.set_meta("light_label",String(id))
+		if light.model != null: light.position.y = light.model.mounting_height_m
 		module.add_child(light)
 		var fixture := MeshInstance3D.new()
+		fixture.name = "Fixture"
 		var strip := BoxMesh.new()
 		strip.size = Vector3(minf(dimensions.x-1.0,4.0),0.05,0.15)
 		fixture.mesh = strip
-		fixture.position = Vector3(0,1.95,0)
+		fixture.position = Vector3(0,0.05 if light.model != null else 1.95,0)
 		var lamp := StandardMaterial3D.new()
 		lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		lamp.albedo_color = Color(0.85,0.9,0.7)
+		lamp.albedo_color = light.model.color if light.model != null else Color(0.85,0.9,0.7)
 		fixture.material_override = lamp
 		light.add_child(fixture)
+		if light.model != null: light.set_active(light.model.enabled)
+		if light.model != null:
+			if not report.has("lighting"): report["lighting"] = []
+			report.lighting.append({"node":String(location.node_id),"profile":String(profile.stable_id),
+				"position":light.global_position,"range_m":light.model.range_m,
+				"direction":-light.visual.global_transform.basis.z,"ambient_readability":light.model.ambient_readability,
+				"logical_peak":light.addition*light.model.logical_peak_per_room_unit,"visual_energy":light.visual.light_energy,
+				"half_angle_deg":light.model.cone_half_angle_deg,"active":light.active,"shadows":light.visual.shadow_enabled})
 		report.lit_rooms.append(String(location.node_id))
 		_build_distribution_covers(plan,module,profile,seed,location,report)
 		var family: String = profile.cover_family_by_semantic.get(String(id),"")
@@ -83,7 +96,51 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 			room_audit["interior" if placement == "INTERIOR" else "lateral"] += 1
 			room_audit["decorative" if category == LogicalCover.Category.LOW else "functional"] += 1
 		report.rooms.append(room_audit)
+	if profile.coherent_light != null:
+		_apply_lit_materials(modules,profile.coherent_light)
 	return report
+
+## Local material copies only; no geometry/collider/bake mutation or shared asset edits.
+## Ambient emission keeps circulation readable without making the kit unshaded.
+static func _apply_lit_materials(root: Node, model: RoomLightModelResource) -> void:
+	for child in root.get_children():
+		if child is GeometryInstance3D and not _physical_occluder(child):
+			child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if child is CSGBox3D and child.material is StandardMaterial3D:
+			child.material = _lit_material(child.material,model)
+		elif child is MeshInstance3D and child.name != "Fixture" and child.mesh != null:
+			for surface in child.mesh.get_surface_count():
+				var material: Material = child.get_active_material(surface)
+				if material is StandardMaterial3D:
+					child.set_surface_override_material(surface,_lit_material(material,model))
+			# material_override takes precedence over surface overrides.
+			if child.material_override is StandardMaterial3D:
+				child.material_override = _lit_material(child.material_override,model)
+		_apply_lit_materials(child,model)
+
+static func _physical_occluder(node: Node) -> bool:
+	var current := node
+	while current != null:
+		if current is StaticBody3D: return true
+		if current is CSGShape3D and current.use_collision: return true
+		current = current.get_parent()
+	return false
+
+## Debug-only meshes have no gameplay collider and must not invent light shadows.
+static func disable_debug_shadows(stage: Node) -> void:
+	for label in ["SemanticLocationDebug","ContentSlotDebug","SectorTransitionDebug"]:
+		var root := stage.get_node_or_null(NodePath(label))
+		if root == null: continue
+		for mesh in root.find_children("*","GeometryInstance3D",true,false):
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+static func _lit_material(original: StandardMaterial3D, model: RoomLightModelResource) -> StandardMaterial3D:
+	var material := original.duplicate() as StandardMaterial3D
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	material.emission_enabled = true
+	material.emission = material.albedo_color
+	material.emission_energy_multiplier = model.ambient_readability
+	return material
 
 
 ## Bounded contextual alternatives. Reuse the same cross, spawn, patrol and

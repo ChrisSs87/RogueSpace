@@ -11,9 +11,10 @@ extends Node
 ## IMPORTANTE (aclaración del usuario, válida para futuras etapas): esto es
 ## un canal de datos LÓGICO para gameplay. Todavía no está sincronizado con
 ## la iluminación VISUAL real de la escena (DirectionalLight/WorldEnvironment)
-## — un lugar puede reportar light_level 1 acá y verse iluminado como nivel
+## Legacy — un lugar puede reportar light_level 1 acá y verse iluminado como nivel
 ## 5 en pantalla. Sincronizar ambos es un requisito pendiente para una etapa
-## posterior, no de esta.
+## posterior. Varkhem V2.3-A activa explícitamente fuentes coherentes por perfil;
+## las fuentes legacy y otros biomas conservan su comportamiento anterior.
 
 ## Luz base del lugar cuando no hay ninguna fuente puntual cerca. Cada
 ## escena/bioma puede pisar esto llamando a set_ambient_light_level() al
@@ -49,3 +50,19 @@ func get_light_level_at(position: Vector3) -> int:
 			continue
 		level += source.get_light_contribution_at(position)
 	return clampi(roundi(level), 0, 5)
+
+## Read-only diagnostic, same registered sources and quantization as perception.
+func get_exposure_diagnostic(position: Vector3) -> Dictionary:
+	var total := float(ambient_light_level)
+	var maximum := 0.0
+	var principal := "AMBIENT"
+	var principal_label := "AMBIENT"
+	for source in _sources:
+		if not is_instance_valid(source): continue
+		var contribution: float = source.get_light_contribution_at(position)
+		total += contribution
+		if contribution > maximum:
+			maximum = contribution
+			principal = str(source.get_path())
+			principal_label = str(source.get_meta("light_label",source.name))
+	return {"level":clampi(roundi(total),0,5),"continuous":total,"principal":principal,"principal_label":principal_label,"contribution":maximum}

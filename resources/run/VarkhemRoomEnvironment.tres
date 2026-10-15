@@ -1,6 +1,10 @@
-[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=10 format=3]
 [ext_resource type="Script" path="res://resources/run/RoomEnvironmentProfileResource.gd" id="1"]
 [ext_resource type="Script" path="res://resources/run/RoomCoverVariantResource.gd" id="2"]
+[ext_resource type="Script" path="res://resources/run/RoomLightModelResource.gd" id="3"]
+
+[sub_resource type="Resource" id="LightModel"]
+script = ExtResource("3")
 
 [sub_resource type="Resource" id="Console"]
 script = ExtResource("2")
@@ -57,6 +61,7 @@ script = ExtResource("1")
 stable_id = &"VARKHEM_ROOM_ENVIRONMENT_B"
 cover_variants = [SubResource("Console"), SubResource("ArmoryMachine"), SubResource("Refrigerator"), SubResource("TallContainer"), SubResource("LowContainer")]
 room_light_addition = 2
+coherent_light = SubResource("LightModel")
 cover_family_by_semantic = {"ARMORY": "STORAGE", "FOOD_STORAGE": "STORAGE", "BARRACKS": "STORAGE"}
 excluded_semantic_ids = Array[StringName]([&"BASE_ACCESS"])
 max_covers_per_room = 2

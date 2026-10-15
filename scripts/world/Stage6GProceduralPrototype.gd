@@ -226,6 +226,8 @@ func _regenerate_current_sector() -> void:
 		current_room_environment_report = preload("res://scripts/world/RoomEnvironmentBuilder.gd").build(current_plan,root,environment,sector_effective_seed)
 		current_applied_environment = {"profile":String(environment.stable_id),"room_light_addition":environment.room_light_addition}
 	_rebuild_content_placement()
+	if environment != null and environment.coherent_light != null:
+		preload("res://scripts/world/RoomEnvironmentBuilder.gd").disable_debug_shadows(self)
 	_update_debug()
 	await get_tree().physics_frame
 	if not _validate_physical_seams():
@@ -1407,6 +1409,8 @@ func get_sector_profile_metrics() -> Dictionary:
 		report.applied.environment = current_applied_environment.profile
 		report.applied["room_light_addition"] = current_applied_environment.room_light_addition
 	# Expanded PROFILES diagnostics only; no permanent HUD text or AI mutation.
+	if current_room_environment_report.has("lighting"):
+		report.applied["lighting"] = current_room_environment_report.lighting.duplicate(true)
 	if current_room_environment_report.has("distribution"):
 		report.applied["distribution_covers"] = current_room_environment_report.distribution.duplicate(true)
 	if current_room_environment_report.has("rooms"):

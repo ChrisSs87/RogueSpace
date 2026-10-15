@@ -25,6 +25,8 @@ extends CanvasLayer
 @onready var perception_button: Button = $Root/ButtonsContainer/PerceptionButton
 
 var _player: Node3D = null
+var _light_debug_elapsed := 0.0
+var _light_debug_text := ""
 
 
 func _ready() -> void:
@@ -49,6 +51,7 @@ func _ready() -> void:
 ## diferencia del resto del HUD (HP/ADN), que solo se actualiza cuando
 ## cambia de verdad, vía señales.
 func _process(_delta: float) -> void:
+	_light_debug_elapsed += _delta
 	if _player == null or not is_instance_valid(_player):
 		_player = get_tree().get_first_node_in_group("player")
 		if _player == null:
@@ -72,6 +75,21 @@ func _process(_delta: float) -> void:
 		speed_label = "%.2f m/s" % _player.get_current_speed_mps()
 
 	player_info_label.text = "PLAYER\nLIGHT: %d / 5\nMOVEMENT: %s\nACTUAL SPEED: %s\nNOISE RADIUS: %s\nNOISE INTENSITY: %s" % [light_level, movement_label, speed_label, noise_radius_label, noise_intensity_label]
+	if DebugConfig.perception_debug_enabled:
+		if _light_debug_elapsed >= 0.2:
+			_light_debug_elapsed = 0.0
+			var exposure := LightingManager.get_exposure_diagnostic(_player.global_position)
+			_light_debug_text = "\nSOURCE: %s" % exposure.principal_label
+			var nearest: Enemy
+			var distance := INF
+			for actor in get_tree().root.find_children("*","CharacterBody3D",true,false):
+				if actor is Enemy and actor.global_position.distance_to(_player.global_position) < distance:
+					nearest = actor
+					distance = actor.global_position.distance_to(_player.global_position)
+			if nearest != null:
+				var perception := nearest.get_cover_perception_debug()
+				_light_debug_text += " | %s | COVER:%s | LOS:%s" % [perception.state,perception.cover,perception.los]
+		player_info_label.text += _light_debug_text
 
 
 func _on_state_changed(_current: int, _max: int) -> void:
