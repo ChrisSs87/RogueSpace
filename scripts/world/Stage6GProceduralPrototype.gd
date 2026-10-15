@@ -1214,16 +1214,19 @@ func _reposition_player() -> void:
 
 
 func _update_debug() -> void:
-	var label := get_node_or_null("Stage6GDebug") as Label
-	if label == null:
-		var layer := CanvasLayer.new()
+	# Scene-owned UI survives sector regeneration: reuse its actual nested path.
+	var layer := get_node_or_null("Stage6GDebugLayer") as CanvasLayer
+	if layer == null:
+		layer = CanvasLayer.new()
 		layer.name = "Stage6GDebugLayer"
+		add_child(layer)
+	var label := layer.get_node_or_null("Stage6GDebug") as Label
+	if label == null:
 		label = Label.new()
 		label.name = "Stage6GDebug"
 		label.position = Vector2(20, 20)
 		label.add_theme_font_size_override("font_size", 18)
 		layer.add_child(label)
-		add_child(layer)
 	if not has_node("SectorProfilesDebugLayer"):
 		var profile_layer := CanvasLayer.new()
 		profile_layer.name = "SectorProfilesDebugLayer"
