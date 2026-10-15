@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="LightingSourceResource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/LightingSourceResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+stable_id = &"torch"
+color = Color(1, 0.55, 0.2, 1)
+mount = "WALL"
+power = 4.0
+visual_energy = 0.8
+range_m = 5.0
+direction = Vector3(0,0,-1)

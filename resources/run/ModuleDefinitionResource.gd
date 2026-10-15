@@ -24,3 +24,6 @@ class_name ModuleDefinitionResource
 @export var forbidden_next_selectors: Array[StringName] = []
 # Slots semánticos locales: no se infieren de la geometría ni crean contenido.
 @export var content_slots: Array[ContentSlotDefinitionResource] = []
+## Optional authored id/mount/position/basis for columns/openings/organic hosts.
+## No effect on assembly, navigation or existing module selection.
+@export var lighting_sockets: Array[Dictionary] = []

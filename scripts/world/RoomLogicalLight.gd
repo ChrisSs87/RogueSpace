@@ -8,6 +8,7 @@ var addition := 2
 var model: RoomLightModelResource
 var profile_id := ""
 var active := true
+var show_inactive_fixture := false
 var visual: SpotLight3D
 var query_count := 0
 var query_usec := 0
@@ -16,7 +17,7 @@ func _ready() -> void:
 	if model != null:
 		visual = SpotLight3D.new()
 		visual.name = "FixtureLight"
-		visual.rotation_degrees.x = -90.0
+		visual.basis = Basis.looking_at(model.direction,Vector3.FORWARD if absf(model.direction.normalized().dot(Vector3.UP)) > 0.99 else Vector3.UP)
 		visual.spot_range = model.range_m
 		visual.spot_angle = model.cone_half_angle_deg
 		visual.spot_attenuation = 1.0
@@ -50,7 +51,10 @@ func set_active(value: bool) -> void:
 	active = value
 	if visual != null: visual.visible = active
 	var fixture := get_node_or_null("Fixture") as MeshInstance3D
-	if fixture != null: fixture.visible = active
+	if fixture != null:
+		fixture.visible = active or show_inactive_fixture
+		if show_inactive_fixture and fixture.material_override is StandardMaterial3D:
+			fixture.material_override.albedo_color = model.color if active else model.color.darkened(1.0-model.inactive_fixture_brightness)
 
 func get_light_diagnostic() -> Dictionary:
 	return {"source":str(get_path()),"profile":profile_id,"position":global_position,

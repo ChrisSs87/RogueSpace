@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="BiomeLightingProfileResource" load_steps=9 format=3]
+[ext_resource type="Script" path="res://resources/run/BiomeLightingProfileResource.gd" id="1"]
+[ext_resource type="Script" path="res://resources/run/LightingVariantResource.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/lighting/military_ceiling.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/lighting/military_wall.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/lighting/military_console.tres" id="5"]
+
+[sub_resource type="Resource" id="OPERATIVA"]
+script = ExtResource("2")
+stable_id = &"OPERATIVA"
+allowed_sources = Array[StringName]([&"military_ceiling", &"military_wall", &"military_console"])
+activation_probability = 1
+power_multiplier = 1
+override_color = false
+color = Color(1, 0.12, 0.08, 1)
+
+[sub_resource type="Resource" id="REDUCIDA"]
+script = ExtResource("2")
+stable_id = &"REDUCIDA"
+allowed_sources = Array[StringName]([&"military_ceiling", &"military_wall", &"military_console"])
+activation_probability = 0.65
+power_multiplier = 0.8
+override_color = false
+color = Color(1, 0.12, 0.08, 1)
+
+[sub_resource type="Resource" id="EMERGENCIA"]
+script = ExtResource("2")
+stable_id = &"EMERGENCIA"
+minimum_active_lights = 1
+allowed_sources = Array[StringName]([&"military_ceiling", &"military_wall", &"military_console"])
+activation_probability = 0.5
+power_multiplier = 0.6
+override_color = true
+color = Color(1, 0.12, 0.08, 1)
+
+[resource]
+script = ExtResource("1")
+stable_id = &"VARKHEM_LIGHTING"
+architecture_id = &"VARKHEM_BASE"
+ambient = 3.0
+max_visual_lights = 8
+sources = [ExtResource("3"), ExtResource("4"), ExtResource("5")]
+variants = [SubResource("OPERATIVA"), SubResource("REDUCIDA"), SubResource("EMERGENCIA")]
+default_variant = &"OPERATIVA"
+placement_rules = Array[Dictionary]([{
+"id":"command_wall", "source":&"military_wall", "mount":"WALL", "semantics":Array[StringName]([&"COMMAND_ROOM"]), "roles":Array[StringName]([&"ROOM",&"SIDE_ROOM"]), "priority":110
+}, {
+"id":"functional_rooms", "source":&"military_ceiling", "mount":"CEILING", "semantic_only":true, "roles":Array[StringName]([&"ROOM",&"SIDE_ROOM",&"JUNCTION"]), "priority":100
+}, {
+"id":"real_consoles", "source":&"military_console", "mount":"CONSOLE", "roles":Array[StringName]([&"ROOM",&"SIDE_ROOM",&"JUNCTION"]), "supplemental":true, "priority":75
+}, {
+"id":"regular_circulation", "source":&"military_ceiling", "mount":"CEILING", "roles":Array[StringName]([&"CORRIDOR"]), "depth_stride":3, "priority":50
+}])

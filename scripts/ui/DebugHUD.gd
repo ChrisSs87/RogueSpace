@@ -80,6 +80,7 @@ func _process(_delta: float) -> void:
 			_light_debug_elapsed = 0.0
 			var exposure := LightingManager.get_exposure_diagnostic(_player.global_position)
 			_light_debug_text = "\nSOURCE: %s" % exposure.principal_label
+			_light_debug_text = "\nEXPOSURE: %.1f/10 | SOURCE: %s" % [exposure.exposure,exposure.principal_label]
 			var nearest: Enemy
 			var distance := INF
 			for actor in get_tree().root.find_children("*","CharacterBody3D",true,false):

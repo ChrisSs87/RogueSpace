@@ -5,7 +5,7 @@ const VISUALS := preload("res://scripts/world/RoomCoverVisuals.gd")
 
 ## Restrained first subset: destination perimeter props, BEFORE the existing
 ## collider-derived bake. No solver changes, no navigation drawn by hand.
-static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentProfileResource, seed: int) -> Dictionary:
+static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentProfileResource, seed: int, variant_id: StringName = &"") -> Dictionary:
 	var report := {"covers":[], "lit_rooms":[], "rejected":[]}
 	if profile == null: return report
 	var rng := RandomNumberGenerator.new()
@@ -15,35 +15,36 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 		var module := modules.get_node_or_null(NodePath(String(location.node_id))) as Node3D
 		if module == null or profile.excluded_semantic_ids.has(id): continue
 		var dimensions: Vector2 = module.get_meta("footprint_size")
-		var light := LIGHT.new()
-		light.name = "RoomLogicalLight"
-		light.footprint = dimensions
-		light.addition = profile.room_light_addition
-		light.model = profile.coherent_light.duplicate(true) if profile.coherent_light != null else null
-		light.profile_id = String(profile.stable_id)
-		light.set_meta("light_label",String(id))
-		if light.model != null: light.position.y = light.model.mounting_height_m
-		module.add_child(light)
-		var fixture := MeshInstance3D.new()
-		fixture.name = "Fixture"
-		var strip := BoxMesh.new()
-		strip.size = Vector3(minf(dimensions.x-1.0,4.0),0.05,0.15)
-		fixture.mesh = strip
-		fixture.position = Vector3(0,0.05 if light.model != null else 1.95,0)
-		var lamp := StandardMaterial3D.new()
-		lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		lamp.albedo_color = light.model.color if light.model != null else Color(0.85,0.9,0.7)
-		fixture.material_override = lamp
-		light.add_child(fixture)
-		if light.model != null: light.set_active(light.model.enabled)
-		if light.model != null:
-			if not report.has("lighting"): report["lighting"] = []
-			report.lighting.append({"node":String(location.node_id),"profile":String(profile.stable_id),
-				"position":light.global_position,"range_m":light.model.range_m,
-				"direction":-light.visual.global_transform.basis.z,"ambient_readability":light.model.ambient_readability,
-				"logical_peak":light.addition*light.model.logical_peak_per_room_unit,"visual_energy":light.visual.light_energy,
-				"half_angle_deg":light.model.cone_half_angle_deg,"active":light.active,"shadows":light.visual.shadow_enabled})
-		report.lit_rooms.append(String(location.node_id))
+		if profile.biome_lighting == null:
+			var light := LIGHT.new()
+			light.name = "RoomLogicalLight"
+			light.footprint = dimensions
+			light.addition = profile.room_light_addition
+			light.model = profile.coherent_light.duplicate(true) if profile.coherent_light != null else null
+			light.profile_id = String(profile.stable_id)
+			light.set_meta("light_label",String(id))
+			if light.model != null: light.position.y = light.model.mounting_height_m
+			module.add_child(light)
+			var fixture := MeshInstance3D.new()
+			fixture.name = "Fixture"
+			var strip := BoxMesh.new()
+			strip.size = Vector3(minf(dimensions.x-1.0,4.0),0.05,0.15)
+			fixture.mesh = strip
+			fixture.position = Vector3(0,0.05 if light.model != null else 1.95,0)
+			var lamp := StandardMaterial3D.new()
+			lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			lamp.albedo_color = light.model.color if light.model != null else Color(0.85,0.9,0.7)
+			fixture.material_override = lamp
+			light.add_child(fixture)
+			if light.model != null: light.set_active(light.model.enabled)
+			if light.model != null:
+				if not report.has("lighting"): report["lighting"] = []
+				report.lighting.append({"node":String(location.node_id),"profile":String(profile.stable_id),
+					"position":light.global_position,"range_m":light.model.range_m,
+					"direction":-light.visual.global_transform.basis.z,"ambient_readability":light.model.ambient_readability,
+					"logical_peak":light.addition*light.model.logical_peak_per_room_unit,"visual_energy":light.visual.light_energy,
+					"half_angle_deg":light.model.cone_half_angle_deg,"active":light.active,"shadows":light.visual.shadow_enabled})
+			report.lit_rooms.append(String(location.node_id))
 		_build_distribution_covers(plan,module,profile,seed,location,report)
 		var family: String = profile.cover_family_by_semantic.get(String(id),"")
 		if family.is_empty() or plan.module_types[location.node_id] not in [&"ROOM",&"SIDE_ROOM"] or not plan.links.get(location.node_id,[]).is_empty(): continue
@@ -96,7 +97,10 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 			room_audit["interior" if placement == "INTERIOR" else "lateral"] += 1
 			room_audit["decorative" if category == LogicalCover.Category.LOW else "functional"] += 1
 		report.rooms.append(room_audit)
-	if profile.coherent_light != null:
+	if profile.biome_lighting != null:
+		var presentation := preload("res://scripts/world/BiomeLightingBuilder.gd").build(plan,modules,profile,seed,variant_id,report)
+		_apply_lit_materials(modules,presentation)
+	elif profile.coherent_light != null:
 		_apply_lit_materials(modules,profile.coherent_light)
 	return report
 

@@ -25,6 +25,8 @@ const DOOR_HEIGHT := 2.0
 @export_range(0, 1) var test_content_profile_index := 0
 ## Sólo Stage6J activa este modo. Stage6G/6H conserva sus templates directos.
 @export var archetype_mode := false
+## Only declared lighting variants of the effective environment are accepted.
+@export var lighting_variant_id: StringName = &""
 @export_range(0, 2) var test_archetype_index := 0
 var seed := 0
 var nav_ready := false
@@ -222,11 +224,26 @@ func _regenerate_current_sector() -> void:
 		return
 	current_room_environment_report = {}
 	var environment: RoomEnvironmentProfileResource = current_sector_profiles.environment
+	var biome_light: BiomeLightingProfileResource = environment.biome_lighting if environment != null else null
+	if biome_light != null:
+		var errors := biome_light.validate_variant(lighting_variant_id)
+		if biome_light.architecture_id != active_archetype.archetype_id: errors.append("lighting architecture mismatch")
+		if not errors.is_empty():
+			assembly_valid = false
+			assembly_error = str(errors)
+			push_error(assembly_error)
+			return
+	LightingManager.configure_biome(biome_light,self)
 	if environment != null:
-		current_room_environment_report = preload("res://scripts/world/RoomEnvironmentBuilder.gd").build(current_plan,root,environment,sector_effective_seed)
+		current_room_environment_report = preload("res://scripts/world/RoomEnvironmentBuilder.gd").build(current_plan,root,environment,sector_effective_seed,lighting_variant_id)
 		current_applied_environment = {"profile":String(environment.stable_id),"room_light_addition":environment.room_light_addition}
+		if not current_room_environment_report.get("lighting_errors",[]).is_empty():
+			assembly_valid = false
+			assembly_error = str(current_room_environment_report.lighting_errors)
+			push_error(assembly_error)
+			return
 	_rebuild_content_placement()
-	if environment != null and environment.coherent_light != null:
+	if environment != null and (environment.coherent_light != null or environment.biome_lighting != null):
 		preload("res://scripts/world/RoomEnvironmentBuilder.gd").disable_debug_shadows(self)
 	_update_debug()
 	await get_tree().physics_frame
@@ -1411,6 +1428,8 @@ func get_sector_profile_metrics() -> Dictionary:
 	# Expanded PROFILES diagnostics only; no permanent HUD text or AI mutation.
 	if current_room_environment_report.has("lighting"):
 		report.applied["lighting"] = current_room_environment_report.lighting.duplicate(true)
+	if current_room_environment_report.has("lighting_profile"):
+		report.applied["lighting_profile"] = current_room_environment_report.lighting_profile.duplicate(true)
 	if current_room_environment_report.has("distribution"):
 		report.applied["distribution_covers"] = current_room_environment_report.distribution.duplicate(true)
 	if current_room_environment_report.has("rooms"):

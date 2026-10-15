@@ -6,6 +6,7 @@ class_name RoomEnvironmentProfileResource
 @export_range(0, 5) var room_light_addition := 2
 ## Null preserves the historical uniform room contribution and unshaded kit.
 @export var coherent_light: RoomLightModelResource
+@export var biome_lighting: BiomeLightingProfileResource
 @export var cover_family_by_semantic: Dictionary = {}
 ## Empty keeps the B box presentation/selection unchanged.
 @export var cover_variants: Array[RoomCoverVariantResource] = []

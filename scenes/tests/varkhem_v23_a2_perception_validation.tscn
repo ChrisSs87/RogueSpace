@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/tests/varkhem_v23_a2_perception_validation.gd" id="1"]
+[node name="VarkhemV23A2PerceptionValidation" type="Node3D"]
+script = ExtResource("1")

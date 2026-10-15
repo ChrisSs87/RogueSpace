@@ -81,7 +81,12 @@ func _ready() -> void:
 		check(applied.applied.content_status == "CONSUMED","actual runtime consumption status explicit")
 		for node_id in stage.current_room_environment_report.lit_rooms:
 			var module: Node3D = stage.get_node("AssembledModules").get_node(NodePath(node_id))
-			check(module.get_node("RoomLogicalLight").addition == 1 and LightingManager.get_light_level_at(module.global_position) == 2,"real local light consumed, ambient retained")
+			var light := module.get_node("RoomLogicalLight")
+			var expected := 2
+			if dimmer.biome_lighting != null:
+				# A2 approved ambient uses canonical 0..10, not historical ambient 1/5.
+				expected = clampi(roundi(dimmer.biome_lighting.ambient/2.0+light.model.contribution(light.to_local(module.global_position),1.0)),0,5)
+			check(light.addition == 1 and LightingManager.get_light_level_at(module.global_position) == expected,"real local light consumed, effective ambient/profile retained")
 		var override_signature := snapshot(stage)
 		await stage._regenerate_current_sector()
 		check(await wait_ready(stage) and snapshot(stage) == override_signature,"same seed/overrides deterministic")
