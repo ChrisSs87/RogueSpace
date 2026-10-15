@@ -2,7 +2,8 @@ extends Node
 
 ## LightingManager.gd (autoload)
 ## Canonical exposure: get_exposure_at() uses 0..10. Existing perception curves
-## use get_light_level_at(), an explicit 0..5 compatibility adapter of that sum.
+## use get_detection_light_level_at() for curve sampling; get_light_level_at()
+## remains the integer 0..5 compatibility adapter of that same sum.
 ## Punto único para consultar exposición en cualquier posición
 ## del mundo. Combina una luz AMBIENTAL global con FUENTES puntuales
 ## registradas (antorchas, etc.) — sin grilla, sin asignar nada al azar por
@@ -66,6 +67,12 @@ func get_light_level_at(position: Vector3) -> int:
 	# Existing species curves remain 0..5; conversion happens AFTER aggregation.
 	return clampi(roundi(get_exposure_at(position)/2.0),0,5)
 
+## A2 profiles opt into continuous curve sampling, not integer rounding.
+## Legacy scenes retain their exact historical quantization and balance.
+func get_detection_light_level_at(position: Vector3) -> float:
+	var level := get_exposure_at(position)/2.0
+	return level if _biome_profile != null else float(clampi(roundi(level),0,5))
+
 ## Canonical 0..10 exposure. Legacy sources are adapted, not duplicated.
 func get_exposure_at(position: Vector3) -> float:
 	var level := get_ambient_exposure()
@@ -89,4 +96,5 @@ func get_exposure_diagnostic(position: Vector3) -> Dictionary:
 			maximum = contribution
 			principal = str(source.get_path())
 			principal_label = str(source.get_meta("light_label",source.name))
-	return {"level":clampi(roundi(total/2.0),0,5),"exposure":clampf(total,0,10),"continuous":total,"scale":10,"ambient":get_ambient_exposure(),"principal":principal,"principal_label":principal_label,"contribution":maximum}
+	var exposure := clampf(total,0,10)
+	return {"level":clampi(roundi(exposure/2.0),0,5),"detection_level":exposure/2.0 if _biome_profile != null else float(clampi(roundi(exposure/2.0),0,5)),"exposure":exposure,"continuous":total,"scale":10,"ambient":get_ambient_exposure(),"principal":principal,"principal_label":principal_label,"contribution":maximum}

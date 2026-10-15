@@ -753,8 +753,8 @@ func _evaluate_vision(player: Node3D) -> String:
 		_debug_capability_str = "N/A"
 		return VISION_NONE
 
-	var light_level: int = LightingManager.get_light_level_at(player.global_position)
-	_debug_light_str = "%d / 5" % light_level
+	var light_level: float = LightingManager.get_detection_light_level_at(player.global_position)
+	_debug_light_str = "%.2f / 5" % light_level
 
 	var capability: float = _get_light_detection_capability(light_level)
 	if _is_within_proximity_override(player):
@@ -866,12 +866,15 @@ func get_cover_perception_debug() -> Dictionary:
 
 ## Capacidad de detección (0.0-1.0) según la tabla configurable del
 ## EnemyResource — ver EnemyResource.light_detection_curve.
-func _get_light_detection_capability(light_level: int) -> float:
+## Fractional levels interpolate adjacent entries; integer levels stay exact.
+func _get_light_detection_capability(light_level: float) -> float:
 	var curve: Array = enemy_resource.light_detection_curve
 	if curve.is_empty():
 		return 1.0
-	var index: int = clampi(light_level, 0, curve.size() - 1)
-	return curve[index]
+	var coordinate := clampf(light_level, 0.0, float(curve.size() - 1))
+	var lower := floori(coordinate)
+	var upper := mini(lower + 1, curve.size() - 1)
+	return lerpf(float(curve[lower]), float(curve[upper]), coordinate - float(lower))
 
 
 ## Sección 7 de la spec: a distancia muy corta, con FOV y línea de visión
@@ -1106,7 +1109,7 @@ func refresh_encounter_contact_valid() -> bool:
 func has_confirmed_visual_contact(player: Node3D) -> bool:
 	if player == null or enemy_resource == null: return false
 	var has_visual_baseline: bool = _passes_vision_baseline(player)
-	var capability := _get_light_detection_capability(LightingManager.get_light_level_at(player.global_position))
+	var capability := _get_light_detection_capability(LightingManager.get_detection_light_level_at(player.global_position))
 	if _is_within_proximity_override(player): capability = 1.0
 	var minimum := enemy_resource.visual_suspicion_min_capability if enemy_resource.visual_suspicion_enabled else 0.0
 	return has_visual_baseline and _sight_timer >= enemy_resource.detection_time_sec and capability >= minimum

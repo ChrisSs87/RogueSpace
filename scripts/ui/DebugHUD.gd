@@ -60,7 +60,7 @@ func _process(_delta: float) -> void:
 
 	# Mismo valor que usa Perception (Enemy._evaluate_vision) para evaluar
 	# al jugador — ninguna fórmula nueva ni duplicada.
-	var light_level: int = LightingManager.get_light_level_at(_player.global_position)
+	var light_level: float = LightingManager.get_detection_light_level_at(_player.global_position)
 	var movement_label: String = "N/A"
 	var noise_radius_label: String = "N/A"
 	var noise_intensity_label: String = "N/A"
@@ -74,13 +74,13 @@ func _process(_delta: float) -> void:
 	if _player.has_method("get_current_speed_mps"):
 		speed_label = "%.2f m/s" % _player.get_current_speed_mps()
 
-	player_info_label.text = "PLAYER\nLIGHT: %d / 5\nMOVEMENT: %s\nACTUAL SPEED: %s\nNOISE RADIUS: %s\nNOISE INTENSITY: %s" % [light_level, movement_label, speed_label, noise_radius_label, noise_intensity_label]
+	player_info_label.text = "PLAYER\nLIGHT: %.2f / 5\nMOVEMENT: %s\nACTUAL SPEED: %s\nNOISE RADIUS: %s\nNOISE INTENSITY: %s" % [light_level, movement_label, speed_label, noise_radius_label, noise_intensity_label]
 	if DebugConfig.perception_debug_enabled:
 		if _light_debug_elapsed >= 0.2:
 			_light_debug_elapsed = 0.0
 			var exposure := LightingManager.get_exposure_diagnostic(_player.global_position)
 			_light_debug_text = "\nSOURCE: %s" % exposure.principal_label
-			_light_debug_text = "\nEXPOSURE: %.1f/10 | SOURCE: %s" % [exposure.exposure,exposure.principal_label]
+			_light_debug_text = "\nEXPOSURE: %.1f/10 | AMBIENT: %.1f/10 | SOURCE: %s" % [exposure.exposure,exposure.ambient,exposure.principal_label]
 			var nearest: Enemy
 			var distance := INF
 			for actor in get_tree().root.find_children("*","CharacterBody3D",true,false):
