@@ -205,14 +205,13 @@ func _ready() -> void:
 			if mode == "positioning_suspend":
 				if not altered:
 					external_position = actors[1].global_position
-					if Vector2(external_position.x-4,external_position.z-8).length() < 0.1: errors.append("FAIL_FIXTURE: bystander was not moving before suspension")
+					if Vector2(external_position.x-4,external_position.z-8).length() < 0.1: errors.append("FAIL_FIXTURE: bystander was not moving before preparation")
 					altered = true
-				if not ExplorationState.is_suspended() or not player.is_frozen: errors.append("FAIL_PRODUCTION: positioning left exploration active")
-				if actors[1].global_position.distance_to(external_position) > 0.001: errors.append("FAIL_PRODUCTION: external actor moved during positioning")
+				if ExplorationState.is_suspended() or player.is_frozen: errors.append("FAIL_PRODUCTION: preparation suspended exploration before effective combat")
 			if mode == "closed_recovery":
 				if not altered:
-					# Exploration perception is intentionally suspended in positioning.
-					# Exercise the closed API separately, without manufacturing sight.
+					# Reservation closes membership, not exploration. Exercise the
+					# closed API separately, without manufacturing sight.
 					if CombatEncounterManager.request_encounter_candidate(actors[1]) != CombatEncounterManager.REJECTED_CLOSED: errors.append("FAIL_PRODUCTION: closed positioning accepts extra request")
 					altered = true
 			if mode == "reset_approach" and not altered:
@@ -235,6 +234,11 @@ func _ready() -> void:
 		if mode == "lost" and altered and not CombatEncounterManager.is_encounter_active(): break
 		if mode == "impossible" and altered and not CombatEncounterManager.is_encounter_active(): break
 	var final := _snapshot("FINAL")
+	if mode == "positioning_suspend" and starts == 1:
+		if actors[1].global_position.distance_to(external_position) < 0.1: errors.append("FAIL_PRODUCTION: external patrol did not advance during preparation")
+		var combat_transform := actors[1].global_transform
+		for tick in 24: await get_tree().physics_frame
+		if not ExplorationState.is_suspended() or not player.is_frozen or actors[1].global_transform != combat_transform: errors.append("FAIL_PRODUCTION: effective combat did not suspend external actor and Player")
 	if mode == "closed_recovery":
 		if starts != 1 or actors[1]._has_requested_encounter or CombatManager.get_combatant_count() != 1: errors.append("FAIL_FIXTURE_OR_PRODUCTION: suspended bystander entered encounter")
 		_snapshot("LEGITIMATE_CLOSED_REJECTION")

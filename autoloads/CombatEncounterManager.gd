@@ -86,8 +86,6 @@ var _approach_timer: float = -1.0
 ## Participantes iniciados por emboscada: no requieren contacto sensorial al
 ## cerrar la ventana, porque Ambush es su propia ruta legítima a Encounter.
 var _ambush_candidates: Array = []
-var _positioning_player: WeakRef
-var _player_was_frozen := false
 var _diagnostic := {"result":"NONE","participants":[],"excluded":[]}
 
 
@@ -182,10 +180,9 @@ func _lock_encounter() -> void:
 		return
 
 	_approach_timer = 0.0
-	_positioning_player = weakref(player)
-	_player_was_frozen = player.get("is_frozen") == true
-	if player.has_method("freeze_for_combat"): player.freeze_for_combat()
-	ExplorationState.set_encounter_positioning(true)
+	# A reservation/APPROACH is not effective COMBAT. Player input, unrelated
+	# exploration and sensory ticks remain active while participants approach
+	# the live Player. Only _start_combat_now may freeze after final validation.
 	_diagnostic.result = "POSITIONING"
 	for enemy in valid_enemies:
 		_diagnostic.participants.append({"id":enemy.get_instance_id(),"distance":enemy.global_position.distance_to(player.global_position),"ambush":enemy in _ambush_candidates})
@@ -217,16 +214,7 @@ func _cancel_pending_encounter() -> void:
 	_encounter_locked = false
 	_enemies_in_position = []
 	_approach_timer = -1.0
-	_end_positioning(true)
 	if _diagnostic.result in ["COLLECTING","POSITIONING"]: _diagnostic.result = "CANCELLED_NO_SAFE_PARTICIPANT"
-
-
-func _end_positioning(cancelled: bool) -> void:
-	ExplorationState.set_encounter_positioning(false)
-	var player: Node = _positioning_player.get_ref() if _positioning_player != null else null
-	if cancelled and player != null and player.has_method("unfreeze_after_combat") and not _player_was_frozen and not ExplorationState.is_suspended():
-		player.unfreeze_after_combat()
-	_positioning_player = null
 
 
 ## Expandable debug consumer; no additional permanent floating/HUD text.
@@ -392,7 +380,6 @@ func _start_combat_now() -> void:
 	for enemy in valid_enemies:
 		_diagnostic.participants.append({"id":enemy.get_instance_id(),"admission_distance":enemy.global_position.distance_to(player.global_position),"position":"CURRENT_SAFE_POSITION"})
 	EventBus.combat_ready.emit(player, valid_enemies)
-	_end_positioning(false)
 
 
 ## Llamado por CombatManager cuando un combate termina (victoria). Sin esto,
