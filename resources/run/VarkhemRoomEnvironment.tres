@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="RoomEnvironmentProfileResource" load_steps=12 format=3]
 [ext_resource type="Script" path="res://resources/run/RoomEnvironmentProfileResource.gd" id="1"]
 [ext_resource type="Script" path="res://resources/run/RoomCoverVariantResource.gd" id="2"]
 [ext_resource type="Script" path="res://resources/run/RoomLightModelResource.gd" id="3"]
 [ext_resource type="Resource" path="res://resources/lighting/VarkhemLighting.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/run/VarkhemVisualStyle.tres" id="5_visual"]
 
 [sub_resource type="Resource" id="LightModel"]
 script = ExtResource("3")
@@ -64,6 +65,7 @@ cover_variants = [SubResource("Console"), SubResource("ArmoryMachine"), SubResou
 room_light_addition = 2
 coherent_light = SubResource("LightModel")
 biome_lighting = ExtResource("4")
+visual_style = ExtResource("5_visual")
 cover_family_by_semantic = {"ARMORY": "STORAGE", "FOOD_STORAGE": "STORAGE", "BARRACKS": "STORAGE"}
 excluded_semantic_ids = Array[StringName]([&"BASE_ACCESS"])
 max_covers_per_room = 2

@@ -102,6 +102,8 @@ static func build(plan: DungeonPlan, modules: Node3D, profile: RoomEnvironmentPr
 		_apply_lit_materials(modules,presentation)
 	elif profile.coherent_light != null:
 		_apply_lit_materials(modules,profile.coherent_light)
+	if profile.visual_style != null and profile.biome_lighting != null:
+		preload("res://scripts/world/VarkhemVisualStyler.gd").apply(plan,modules,profile,variant_id)
 	return report
 
 ## Local material copies only; no geometry/collider/bake mutation or shared asset edits.

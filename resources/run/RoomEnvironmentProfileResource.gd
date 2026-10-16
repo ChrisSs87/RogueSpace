@@ -7,6 +7,8 @@ class_name RoomEnvironmentProfileResource
 ## Null preserves the historical uniform room contribution and unshaded kit.
 @export var coherent_light: RoomLightModelResource
 @export var biome_lighting: BiomeLightingProfileResource
+## Null leaves every other biome and legacy presentation untouched.
+@export var visual_style: VarkhemVisualStyleResource
 @export var cover_family_by_semantic: Dictionary = {}
 ## Empty keeps the B box presentation/selection unchanged.
 @export var cover_variants: Array[RoomCoverVariantResource] = []

@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="VarkhemVisualStyleResource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://resources/run/VarkhemVisualStyleResource.gd" id="1"]
+[resource]
+script = ExtResource("1")
+semantic_accents = {"BARRACKS":Color(0.63,0.66,0.42,1),"FOOD_STORAGE":Color(0.72,0.52,0.25,1),"ARMORY":Color(0.68,0.34,0.28,1),"PRISON":Color(0.65,0.34,0.28,1),"CENTRAL_HUB":Color(0.37,0.57,0.61,1),"COMMAND_ROOM":Color(0.79,0.63,0.31,1)}
+semantic_labels = {"BARRACKS":"BARRACAS / PERSONAL","FOOD_STORAGE":"DEPOSITO / SUMINISTROS","ARMORY":"ARMERIA / SEGURIDAD","PRISON":"DETENCION / RESTRINGIDO","CENTRAL_HUB":"DISTRIBUCION / BASE","COMMAND_ROOM":"MANDO / CONTROL","VARKHEM_ROOM":"SERVICIOS / BASE","BASE_ACCESS":"ACCESO / BASE"}
