@@ -4,6 +4,10 @@ Actualizado:2026-10-20. Leer [AI_CONTEXT](ROGUESPACE_AI_CONTEXT.md), después
 [AI_HANDOFF](ROGUESPACE_AI_HANDOFF.md). Estos tres documentos son una síntesis
 portable, NO una rama de integración ni un STATUS alternativo del juego.
 
+[Qué enviar a cada IA y paquetes verificados](WHAT_TO_SEND_EACH_AI.md).
+El índice posterior corresponde a TAREA5;los3documentos centrales siguen siendo
+README,AI_CONTEXT yAI_HANDOFF. Sólo documentación en esta rama,ningún código nuevo.
+
 Esta rama documental parte de main8bc3e890. Su código NO contiene automáticamente
 las funcionalidades descritas de las ramas de desarrollo. Elegir el SHA de la
 tarea antes de analizar o editar código. STATUS de desarrollo sigue en

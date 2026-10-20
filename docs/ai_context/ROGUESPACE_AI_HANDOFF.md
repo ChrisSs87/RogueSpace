@@ -84,7 +84,7 @@ no se verificaron ahora;solicitar manifiesto antes de redistribuirlos.
 |2 motioncomics|PARTIAL|experiment/motion-comics-v1,5a49cbd43c6d5ff6224575a899f23b8fb5ed0877;MVPaisladoPASS,sin integración/VRcert|
 |3 Avispa techo|PARTIAL|experiment/horvex-ceiling-wasp-v1,ed661c874a99b3b5f3efa2c42988e845c9a7a6f7;secuenciaPASS,QA móvil/rearme pendientes|
 |4 calidadF1|PASS INFORME|sólo lectura6700e93;ver revisión de16casos abajo;no prueba móvil nueva|
-|5 paquetes porIA|PREPARACIÓN|documental;adjuntables para DeepSeek,índiceWHAT_TO_SEND_EACH_AI.md|
+|5 paquetes porIA|PASS|4ZIPenDrive,CRC/manifest ydescargaSHAidénticos;índiceWHAT_TO_SEND_EACH_AI.md|
 
 Cada tarea debe dejar commit+checkpoint incluso ante bloqueo. No encadenar
 bases funcionales:ninguna tarea independiente hereda F1 accidentalmente.
@@ -217,3 +217,22 @@ posición deAvispas,CMparticipantes/objetivo,primera muerte/recompensa ylogs.
 No resetear O₂ entresectores para medir presupuesto. Detener ante caída/bloqueo,
 sin declarar imposible una ruta por una estrategia fallida. Cardboard requiere
 sesión independiente sin giro forzado;no sustituir V4 por capturas de escritorio.
+
+## Cierre TAREA5 y checkpoint global
+
+[Índice de envío](WHAT_TO_SEND_EACH_AI.md):4ZIPcompactos conORIGIN,MANIFEST,
+contexto,fuentes y evidencias. AI_CONTEXT/PACKAGESverificada;4subidas nuevas,
+metadatareadback ydescarga real conhash idéntico. No sonproyectosGodotimportables
+ni TESTMOBILE,no se tocóLATEST. COMMONdentrodeZIPfija commit71f5044,anterior a
+cerrar publicación;estehandoff/índiceexterno contienen estadofinal. No reconstruir
+paquetes para crear una falsa autorreferencia de hashes.
+
+Tareas1–3 recuperadas en ramas independientes desde31044975,sin publicación de
+código ni integración. Task4lee6700e93sin cambios. Sólo rama documental recibe
+pushnormal. ActualizarDriveconlosmismos3IDs ysubiríndice;verificarGitSHA/metadata.
+NingunaPR/tag automático. NATIVE_AVmotion,importaciones no limpias,persistencia
+ausente yCardboard siguenabiertos;no cerrar por tener capturas/EXIT_0.
+
+Próximaacción:revisión externaOXYGEN_COMBAT ycontrato persistente antes de
+integrar;revisión de ownershipmundonarrativo;QAvisual/táctil techo sinspawn.
+Nada autoriza merge,visión18m,C2nuevos,suspendernavencombateo reemplazarZIPestable.
