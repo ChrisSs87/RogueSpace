@@ -79,7 +79,7 @@ no se verificaron ahora;solicitar manifiesto antes de redistribuirlos.
 
 |Tarea|Estado al iniciar|Base/alcance/aceptación|
 |---|---|---|
-|0 contexto y publicación|EN CURSO|docs/roguespace-ai-context desde main;SOLO estos3MD;Drive+GitHub verificables|
+|0 contexto y publicación|PASS|docs/roguespace-ai-context desde main;SOLO estos3MD;Drive+GitHub verificados|
 |1 derrotaO₂|NOT STARTED|rama independiente desde31044975,noF1;auditar antes;STOP si falta contrato persistente|
 |2 motioncomics|NOT STARTED|otra rama desde31044975;MVP aislado,presentación no determina gameplay|
 |3 Avispa techo|NOT STARTED|otra rama desde31044975;escenaopt-in,noResourceglobal/generador|
@@ -102,3 +102,24 @@ Claude/Copilot:confirmar acceso y SHA;si necesitan31044975/F1,adjuntar fuentes
 o respaldo autorizado porque GitHub B+C1 no los contiene. DeepSeek:adjuntar
 contexto+handoff+fuentes/fixtures concretos cada sesión. Nadie deduce implementación
 por un diseño. Declarar archivos,autoridad,base,pruebas,riesgos y condición STOP.
+
+## Cierre TAREA0 — disponibilidad comprobada
+
+Push normal autorizado completadoEXIT_0. SHA remoto verificado inicialmente
+`64213b67bd8e9dda10650b440905c1bf0e811bff`;los commits siguientes sólo actualizan
+estos documentos. Main remoto permanece8bc3e890, sin merge/PR/forcepush.
+[Rama documental](https://github.com/ChrisSs87/RogueSpace/tree/docs/roguespace-ai-context/docs/ai_context).
+Los3archivos se consultaron por conectorGitHub;no sólo se asumió éxito del push.
+
+[CarpetaDriveAI_CONTEXT](https://drive.google.com/drive/folders/1lvcoZe49SnP__2p1kO_M9A_WmMpAsW-g)
+creada en la carpeta oficial RogueSpace, sin mover/borrar archivos previos.
+Tres subidas y readbackmetadata MIME/tamaño/parent verificados:
+[README](https://drive.google.com/file/d/1_S4PuFgDJssLFV5bZ8AMmgEs8wezMlS5/view?usp=drivesdk),
+[AI_CONTEXT](https://drive.google.com/file/d/1FSGEM6t28X__zkyho9zd8_ePZmjqmt4d/view?usp=drivesdk),
+[AI_HANDOFF](https://drive.google.com/file/d/1j7cPFYlqMBCtNsy1l2K6SJ9_zfzmx4_C/view?usp=drivesdk).
+Lectura textualREADME confirmócontenido;fetchtextualContextseinterrumpiópor demora
+sin repetirindefinidamente. Su disponibilidad se confirmópor metadata, no por
+comparación byte-a-byte de descarga. Son archivosmarkdown originales,noDocs
+convertidos. Se usan IDsestables al actualizar;no hay servicio automático instalado.
+La víaGitWindows con acceso de red sí funcionó hoy;esto no demuestra que el
+fallo histórico getaddrinfo haya desaparecido de todos los entornos.
