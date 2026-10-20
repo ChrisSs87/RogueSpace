@@ -77,6 +77,15 @@ DISEÑADO NO IMPLEMENTADO en bases:linternaV01(cono→ALERT,noCHASEautomático),
 motioncomics,reliquias/calor/trampasSuraan,Avispa techo/presentación rápida combate.
 No confundir los documentos de Gemini/DeepSeek con sistemas existentes.
 
+Experimentos posteriores de esta cola, NO en esas bases ni integrados:
+- experiment/oxygen-defeat-v1,75c1148:derrotaO₂runtime y ownership terminal;
+  PARTIAL por falta de persistencia a disco. No cambia costes.
+- experiment/motion-comics-v1,5a49cbd:visor data-driven aislado y caller local;
+  PARTIAL:sin suspensión global narrativa,escenas vistas persistentes oXRvalidado.
+- experiment/horvex-ceiling-wasp-v1,ed661c8:subclase opt-in con descenso físico,
+  percepciónheredada;no spawnprocedural,rearmeBLOCKEDo validación móvil.
+Los tres parten de31044975 independientemente;ninguno heredaF1ni a los otros.
+
 ## Trabajo multi-IA
 
 1. Tarea escrita con base SHA exacta, archivos/sistemas permitidos y gates.

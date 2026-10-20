@@ -80,11 +80,11 @@ no se verificaron ahora;solicitar manifiesto antes de redistribuirlos.
 |Tarea|Estado al iniciar|Base/alcance/aceptación|
 |---|---|---|
 |0 contexto y publicación|PASS|docs/roguespace-ai-context desde main;SOLO estos3MD;Drive+GitHub verificados|
-|1 derrotaO₂|NOT STARTED|rama independiente desde31044975,noF1;auditar antes;STOP si falta contrato persistente|
-|2 motioncomics|NOT STARTED|otra rama desde31044975;MVP aislado,presentación no determina gameplay|
-|3 Avispa techo|NOT STARTED|otra rama desde31044975;escenaopt-in,noResourceglobal/generador|
-|4 calidadF1|NOT STARTED|sólo lectura6700e93;QA móvil y recomendaciones,no solver/retries|
-|5 paquetes porIA|NOT STARTED|documental;adjuntables para DeepSeek,rutasDrive para Gemini|
+|1 derrotaO₂|PARTIAL|experiment/oxygen-defeat-v1,75c114870b98bb92bd2d1b1ea2dea79f000190a2;runtimePASS,persistenciaBLOCKED|
+|2 motioncomics|PARTIAL|experiment/motion-comics-v1,5a49cbd43c6d5ff6224575a899f23b8fb5ed0877;MVPaisladoPASS,sin integración/VRcert|
+|3 Avispa techo|PARTIAL|experiment/horvex-ceiling-wasp-v1,ed661c874a99b3b5f3efa2c42988e845c9a7a6f7;secuenciaPASS,QA móvil/rearme pendientes|
+|4 calidadF1|PASS INFORME|sólo lectura6700e93;ver revisión de16casos abajo;no prueba móvil nueva|
+|5 paquetes porIA|PREPARACIÓN|documental;adjuntables para DeepSeek,índiceWHAT_TO_SEND_EACH_AI.md|
 
 Cada tarea debe dejar commit+checkpoint incluso ante bloqueo. No encadenar
 bases funcionales:ninguna tarea independiente hereda F1 accidentalmente.
@@ -123,3 +123,97 @@ comparación byte-a-byte de descarga. Son archivosmarkdown originales,noDocs
 convertidos. Se usan IDsestables al actualizar;no hay servicio automático instalado.
 La víaGitWindows con acceso de red sí funcionó hoy;esto no demuestra que el
 fallo histórico getaddrinfo haya desaparecido de todos los entornos.
+
+## Cierre TAREA1 — O₂
+
+Base31044975,commits6ba8dae(runtime6archivos) y75c1148(fixtures+checkpoint).
+Worktreeoxygen_defeat_v1_worktree limpio. RunState.is_run_terminal/end_run y
+señalrun_ended,guardas de combate/rewards,suspensiónterminal,UIderrota existente.
+Cinco controles finalesPASS/EXIT_0:agotamientoPlayerreal,admisiónconO₂insuficiente,
+repetición/late_win,recompensapendiente,cierrecombate,recargaescena,nueva run;
+regresionescoste,mobilepair,OMITIR yC1. ImportaciónEXIT_0conSafe save,INCOMPLETE.
+PrimerfixturePASSconcoroutines por teardownprematuro;corregido sólo fixture y
+repetido sin esos errores. No esconder la primera consola.
+No SaveManager/guardado-run en base:DISKPERSISTENCEBLOCKED,no formato inventado.
+Falta prueba en dispositivo y contrato ambiental/guardado general. No integración.
+docs/tasks/VERIFICATION_FINDINGS.md yOXYGEN_DEFEAT_V1_CHECKPOINT.md en su rama.
+Logs artifacts/master_queue_20261020/oxygen. Checkpoint es suplemento a esta ficha.
+
+## Cierre TAREA2 — motion comics
+
+Base31044975,5a49cbd,worktreemotion_comics_v1_worktree limpio. Cero archivos
+existentes modificados. NuevoMotionComicPlayer,JSON2paneles,SVGplaceholder,
+demo yfixtures.12checksPASS/EXIT_0 (dos ejecuciones),dos capturas800×480
+deescritorioEXIT_0revisadas. ImportaciónNATIVE_AV(-1073741819),INCOMPLETE.
+Pausa/avance/skip,cut/fade,paneo/zoom,subtítulos,fallbackassets,terminalúnica y
+restauraciónde caller probado. AudiorealdispositivoNOprobado. La captura cierra
+temprano y genera cancelación esperada;no es finalización normal de secuencia.
+No pausa global del mundo ni guardado de vistos;calleradaptaownersexternos.
+Previewdoble2D no equivale aXR/Cardboard;controlesmonoscópicos,rigpendiente.
+docs/tasks/MOTION_COMICS_V1_CHECKPOINT.md;artifacts/master_queue_20261020/motion.
+
+## Cierre TAREA3 — techo
+
+Base31044975,ed661c8,worktreeceiling_wasp_v1_worktree limpio;sin Enemy.gd,
+xenomorfo.tres,generador,combate ni percepción global modificados. HP30/visión11m.
+Opt-inCeilingWaspV1 hereda temporizador/estímulos originales;bloquea candidato/
+emboscada antes de suelo válido. Raytecho,descenso físicovertical,navanchor sólo
+en suelo. Timeoutocupado→BLOCKED,sin rearmadoautomáticoimplementado.
+Cuatro casos finalesPASS/EXIT_0(visión,sonidooculto,sintecho,aterrizajeocupado);
+regresionespairHorvex/percepciónPASS/EXIT_0. Repeticiónvisión ydemobootEXIT_0.
+ImportaciónEXIT_0conSafe saveINCOMPLETE. NoAndroid,navegacióntecho,spawnreal,
+animaciones finales,proporción de dobles ni medida móvil. Demo reutiliza controles
+Touch/CombatUI/RewardUI. docs/tasks/CEILING_WASP_V1_CHECKPOINT.md;
+artifacts/master_queue_20261020/ceiling. Revisar antes de cualquier integración.
+
+## TAREA4 — calidad V1F.1, revisión no destructiva
+
+Fuente6700e93:comparison.json/csv,runtime.json,validation.json ycheckpoint.
+Leídos ahora,sin ejecutar nuevamente los16mapas,sin editarF1o solver.
+
+|Seed|Sector|Módulos|Crítica|Forks secundarios|Profundidadramal|Rectamáxima m|ms|
+|---|---|---|---|---|---|---|---|
+|66041|Upper|34|47,1%|3|4|50|481|
+|66041|Deep|44|34,1%|2|5|62|663|
+|66038|Upper|34|41,2%|2|5|27|500|
+|66038|Deep|44|36,4%|4|7|56|696|
+|66039|Upper|34|44,1%|4|5|52|457|
+|66039|Deep|44|34,1%|3|7|46|668|
+|66040|Upper|34|32,4%|2|7|46|488|
+|66040|Deep|44|31,8%|6|6|58|700|
+|66054|Upper|34|38,2%|2|7|27|460|
+|66054|Deep|44|38,6%|2|6|44|702|
+|66037|Upper|34|44,1%|1|4|50|471|
+|66037|Deep|44|34,1%|2|5|27|698|
+|66042|Upper|34|44,1%|1|4|54|498|
+|66042|Deep|44|36,4%|3|6|71|745|
+|66055|Upper|34|47,1%|1|5|35|518|
+|66055|Deep|44|38,6%|4|7|62|710|
+
+PASStécnico heredado/R,NO nuevoPASSAndroid. Tres imports incompletos detallados
+arriba;V1F.1NOintegrada. No haycircuitos;16firmasdistintas no excluyen repetitividad.
+La prioridad inicial favorece tallos rectos cuando las curvas no admiten fork;
+riesgo de forma ortogonal/peine persiste. Profundidades8→4/7→5 yfork2→1 son
+regresiones locales de variedad,no fallos de nav;no aumentar el mapa para ocultarlo.
+Recta66041Deep46→62 yextra66042Deep71 requieren inspección de experiencia.
+
+Puestos/rutas:V1FDeep4parejas fuera de ruta quedaron≥15,2m (visión11m),sin
+encuentro;F1Deep tiene2centinelas+3parejas yactiva1individual enrutacrítica.
+La selección de slots sobre nueva topología cambió,NO el presupuesto5/8. Faltan
+recorridos completos de ramales yratio de dobles reales,no confundir grupos con
+encuentros. O₂crítica23,55/desvíos41,31/extensa103,24:fixturelocomociónconAIoff,
+combates estimados aparte;no run completa ganada ni O₂derrota integrado enF1.
+
+RecomendacionesNOimplementadas:1)revisar variedad angular contextual conservando
+preflight,márgenes y1intento;2)ponderar puestos en cámaras próximas a rutas y
+ramales funcionales conservando presupuesto/contacto;3)gates de profundidad y
+longitud de rectas basados enQA,antes de añadir bucles/tamaño/retries.
+
+Protocolo QA móvil reproducible (P,NOejecutado):descargarZIPF1verificarSHA/ORIGIN;
+registrar dispositivo,Godot,renderer,resolución.66041U/Dprimero,luego66038/39,
+66037yextras66042Deep;mismaestrategiaWALK yotra exploratoria porseparado.
+Registrar START/EXIT,colisiones,cámaras/ramales,tiempos,O₂antes/despuéssector,
+posición deAvispas,CMparticipantes/objetivo,primera muerte/recompensa ylogs.
+No resetear O₂ entresectores para medir presupuesto. Detener ante caída/bloqueo,
+sin declarar imposible una ruta por una estrategia fallida. Cardboard requiere
+sesión independiente sin giro forzado;no sustituir V4 por capturas de escritorio.
